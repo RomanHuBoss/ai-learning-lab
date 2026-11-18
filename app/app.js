@@ -37,6 +37,19 @@ function persist() {
   localStorage.setItem('ailab:lesson', state.lessonId);
 }
 
+function renderProgress() {
+  const progress = Math.max(0, Math.min(100, Math.round(state.progress)));
+  const ring = $('#progress-ring');
+  const percent = $('#progress-percent');
+  const count = $('#progress-count');
+  if (ring) {
+    ring.style.setProperty('--progress', `${progress}%`);
+    ring.setAttribute('aria-label', `${progress} процентов курса`);
+  }
+  if (percent) percent.textContent = String(progress);
+  if (count) count.textContent = `${Math.round(progress * 36 / 100)} из 36`;
+}
+
 function showToast(message, type = 'info') {
   const region = $('.toast-region');
   const toast = document.createElement('div');
@@ -540,7 +553,7 @@ function action(name, element = null) {
     'search': () => openModal('Поиск по кампусу', '<p>Ищите уроки, термины, проекты и лаборатории. Введите запрос в словаре или откройте карту курса.</p>', '<button class="button button-primary" data-action="go-dictionary">Открыть словарь →</button>'),
     'go-dictionary': () => { closeModal(); setView('dictionary'); $('#term-search').focus(); },
     'open-lesson': () => { closeModal(); openLesson(element?.dataset.lessonId || state.lessonId); },
-    'reset-progress': () => { localStorage.removeItem('ailab:progress'); localStorage.removeItem('ailab:view'); state.progress = 34; showToast('Демо-прогресс сброшен', 'success'); setView('dashboard'); },
+    'reset-progress': () => { localStorage.removeItem('ailab:progress'); localStorage.removeItem('ailab:view'); localStorage.removeItem('ailab:lesson'); state.progress = 0; state.lessonId = '1.01'; state.lab.step = 0; renderProgress(); renderLesson(); resetLab(); showToast('Демо-прогресс сброшен до 0%', 'success'); setView('dashboard'); },
     'export-progress': exportProgress,
     'close-modal': closeModal
   };
@@ -577,4 +590,4 @@ $$('[data-tooltip]').forEach((element) => {
   if (!element.getAttribute('aria-label')) element.setAttribute('aria-label', `Подсказка. ${element.dataset.tooltip}`);
   element.title = element.dataset.tooltip;
 });
-applyTheme(); setView(state.view); renderTerms(); loadTerms(); loadLessons(); loadCurrentUser(); drawLab();
+applyTheme(); renderProgress(); setView(state.view); renderTerms(); loadTerms(); loadLessons(); loadCurrentUser(); drawLab();
