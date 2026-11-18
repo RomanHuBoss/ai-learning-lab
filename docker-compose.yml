@@ -1,0 +1,125 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-ailab}
+      POSTGRES_USER: ${POSTGRES_USER:-ailab}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ailab-dev-password}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks: [internal]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    networks: [internal]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  api:
+    build: .
+    environment:
+      APP_ENV: ${APP_ENV:-demo}
+      CORS_ALLOWLIST: ${CORS_ALLOWLIST:-http://localhost}
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://ailab:ailab-dev-password@db:5432/ailab}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      SECRET_KEY: ${SECRET_KEY:-change-me-in-production-with-at-least-32-bytes}
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production-with-at-least-32-bytes}
+      AI_PROVIDER: ${AI_PROVIDER:-demo}
+      AI_BASE_URL: ${AI_BASE_URL:-https://api.openai.com/v1}
+      AI_MODEL: ${AI_MODEL:-gpt-4o-mini}
+      AI_API_KEY: ${AI_API_KEY:-}
+      RUNNER_URL: ${RUNNER_URL:-http://worker:8010}
+    expose:
+      - "8000"
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      worker:
+        condition: service_healthy
+    networks: [internal, edge]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    restart: unless-stopped
+
+  worker:
+    build: .
+    command: ["python", "-m", "workers.runner"]
+    environment:
+      APP_ENV: ${APP_ENV:-demo}
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://ailab:ailab-dev-password@db:5432/ailab}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      WORKER_MAX_SECONDS: ${WORKER_MAX_SECONDS:-10}
+      WORKER_HTTP: "1"
+      WORKER_PORT: "8010"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: ["ALL"]
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,noexec,nosuid,nodev
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8010/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+    expose: ["8010"]
+    networks: [internal]
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2.8-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./infra/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      api:
+        condition: service_healthy
+    networks: [edge]
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "--quiet", "http://127.0.0.1/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+  caddy_data:
+  caddy_config:
+
+networks:
+  internal:
+    internal: true
+  edge:

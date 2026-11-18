@@ -1,0 +1,902 @@
+{
+  "version": "0.1.0",
+  "language": "ru",
+  "duration_weeks": 16,
+  "modules": [
+    {
+      "id": "m0",
+      "title": "Онбординг и диагностика",
+      "weeks": [
+        0
+      ],
+      "lessons": [
+        "0.01",
+        "0.02"
+      ],
+      "status": "available"
+    },
+    {
+      "id": "m1",
+      "title": "Python, математика и данные",
+      "weeks": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "lessons": [
+        "1.01",
+        "1.02",
+        "1.03",
+        "1.04",
+        "1.05",
+        "1.06",
+        "1.07",
+        "1.08"
+      ],
+      "status": "in_progress"
+    },
+    {
+      "id": "m2",
+      "title": "Классическое машинное обучение",
+      "weeks": [
+        5,
+        6,
+        7
+      ],
+      "lessons": [
+        "2.01",
+        "2.02",
+        "2.03",
+        "2.04",
+        "2.05",
+        "2.06",
+        "2.07",
+        "2.08",
+        "2.09",
+        "2.10",
+        "2.11"
+      ],
+      "status": "locked"
+    },
+    {
+      "id": "m3",
+      "title": "Нейронные сети и глубокое обучение",
+      "weeks": [
+        8,
+        9,
+        10
+      ],
+      "lessons": [
+        "3.01",
+        "3.02",
+        "3.03",
+        "3.04",
+        "3.05",
+        "3.06",
+        "3.07",
+        "3.08",
+        "3.09"
+      ],
+      "status": "locked"
+    },
+    {
+      "id": "m4",
+      "title": "Большие языковые модели и поиск",
+      "weeks": [
+        11,
+        12,
+        13
+      ],
+      "lessons": [
+        "4.01",
+        "4.02",
+        "4.03",
+        "4.04",
+        "4.05",
+        "4.06",
+        "4.07",
+        "4.08",
+        "4.09",
+        "4.10",
+        "4.11",
+        "4.12",
+        "4.13",
+        "4.14",
+        "4.15",
+        "4.16",
+        "4.17"
+      ],
+      "status": "locked"
+    },
+    {
+      "id": "m5",
+      "title": "Производственная разработка",
+      "weeks": [
+        14,
+        15,
+        16
+      ],
+      "lessons": [
+        "5.01",
+        "5.02",
+        "5.03",
+        "5.04"
+      ],
+      "status": "locked"
+    }
+  ],
+  "lessons": [
+    {
+      "id": "1.01",
+      "title": "Переменные и выражения",
+      "prerequisite_ids": [],
+      "objectives": [
+        "создать переменную",
+        "вычислить выражение"
+      ],
+      "lab": "variable-playground",
+      "exercise": "ex-001",
+      "assessment": "q-001",
+      "project": "p-001"
+    },
+    {
+      "id": "1.02",
+      "title": "Типы данных и коллекции",
+      "prerequisite_ids": [
+        "1.01"
+      ],
+      "objectives": [
+        "выбрать тип данных",
+        "обойти коллекцию"
+      ],
+      "lab": "data-cleaning",
+      "exercise": "ex-002",
+      "assessment": "q-002",
+      "project": "p-001"
+    },
+    {
+      "id": "1.03",
+      "title": "Функции и графики",
+      "prerequisite_ids": [
+        "1.01"
+      ],
+      "objectives": [
+        "написать функцию",
+        "прочитать график"
+      ],
+      "lab": "function-plot",
+      "exercise": "ex-003",
+      "assessment": "q-003",
+      "project": "p-001"
+    },
+    {
+      "id": "1.04",
+      "title": "Функция потерь и градиентный спуск",
+      "prerequisite_ids": [
+        "1.03"
+      ],
+      "objectives": [
+        "объяснить функцию потерь",
+        "сделать шаг градиентного спуска"
+      ],
+      "lab": "gradient-descent",
+      "exercise": "ex-004",
+      "assessment": "q-004",
+      "project": "p-001"
+    },
+    {
+      "id": "1.05",
+      "title": "Векторы и матрицы",
+      "prerequisite_ids": [
+        "1.03"
+      ],
+      "objectives": [
+        "выполнить скалярное произведение",
+        "проверить форму матрицы"
+      ],
+      "lab": "tensor-shapes",
+      "exercise": "ex-005",
+      "assessment": "q-005",
+      "project": "p-002"
+    },
+    {
+      "id": "1.06",
+      "title": "Вероятность и случайные величины",
+      "prerequisite_ids": [
+        "1.05"
+      ],
+      "objectives": [
+        "посчитать вероятность",
+        "объяснить условную вероятность"
+      ],
+      "lab": "metric-choice",
+      "exercise": "ex-006",
+      "assessment": "q-006",
+      "project": "p-001"
+    },
+    {
+      "id": "1.07",
+      "title": "Среднее, разброс и выборки",
+      "prerequisite_ids": [
+        "1.06"
+      ],
+      "objectives": [
+        "сравнить среднее и медиану",
+        "оценить разброс"
+      ],
+      "lab": "data-cleaning",
+      "exercise": "ex-007",
+      "assessment": "q-007",
+      "project": "p-001"
+    },
+    {
+      "id": "1.08",
+      "title": "Разбиение данных и утечка",
+      "prerequisite_ids": [
+        "1.07"
+      ],
+      "objectives": [
+        "разделить набор данных",
+        "найти признак утечки"
+      ],
+      "lab": "leakage-detection",
+      "exercise": "ex-008",
+      "assessment": "q-008",
+      "project": "p-001"
+    },
+    {
+      "id": "2.01",
+      "title": "Обучение с учителем",
+      "prerequisite_ids": [
+        "1.08"
+      ],
+      "objectives": [
+        "отличить признак от цели",
+        "описать исходную модель"
+      ],
+      "lab": "pipeline-sort",
+      "exercise": "ex-009",
+      "assessment": "q-009",
+      "project": "p-001"
+    },
+    {
+      "id": "2.02",
+      "title": "Линейная и логистическая регрессия",
+      "prerequisite_ids": [
+        "2.01"
+      ],
+      "objectives": [
+        "выбрать модель",
+        "объяснить сигмоиду"
+      ],
+      "lab": "classification-boundary",
+      "exercise": "ex-010",
+      "assessment": "q-010",
+      "project": "p-001"
+    },
+    {
+      "id": "2.03",
+      "title": "Деревья решений",
+      "prerequisite_ids": [
+        "2.01"
+      ],
+      "objectives": [
+        "изменить глубину дерева",
+        "объяснить переобучение"
+      ],
+      "lab": "tree-depth",
+      "exercise": "ex-011",
+      "assessment": "q-011",
+      "project": "p-001"
+    },
+    {
+      "id": "2.04",
+      "title": "Метрики и матрица ошибок",
+      "prerequisite_ids": [
+        "2.02"
+      ],
+      "objectives": [
+        "выбрать метрику",
+        "прочитать матрицу ошибок"
+      ],
+      "lab": "confusion-matrix",
+      "exercise": "ex-012",
+      "assessment": "q-012",
+      "project": "p-001"
+    },
+    {
+      "id": "2.05",
+      "title": "Регуляризация и перекрёстная проверка",
+      "prerequisite_ids": [
+        "2.03",
+        "2.04"
+      ],
+      "objectives": [
+        "сравнить модели",
+        "объяснить регуляризацию"
+      ],
+      "lab": "regularization",
+      "exercise": "ex-013",
+      "assessment": "q-013",
+      "project": "p-001"
+    },
+    {
+      "id": "2.06",
+      "title": "Модельная карточка",
+      "prerequisite_ids": [
+        "2.05"
+      ],
+      "objectives": [
+        "описать ограничения модели",
+        "заполнить карточку"
+      ],
+      "lab": "model-card",
+      "exercise": "ex-014",
+      "assessment": "q-014",
+      "project": "p-001"
+    },
+    {
+      "id": "3.01",
+      "title": "Нейрон и прямой проход",
+      "prerequisite_ids": [
+        "2.05"
+      ],
+      "objectives": [
+        "вычислить прямой проход",
+        "объяснить функцию активации"
+      ],
+      "lab": "forward-pass",
+      "exercise": "ex-015",
+      "assessment": "q-015",
+      "project": "p-002"
+    },
+    {
+      "id": "3.02",
+      "title": "Обратное распространение ошибки",
+      "prerequisite_ids": [
+        "3.01",
+        "1.04"
+      ],
+      "objectives": [
+        "применить цепное правило",
+        "обновить вес"
+      ],
+      "lab": "backprop",
+      "exercise": "ex-016",
+      "assessment": "q-016",
+      "project": "p-002"
+    },
+    {
+      "id": "3.03",
+      "title": "Свёртка и тензоры",
+      "prerequisite_ids": [
+        "3.01",
+        "1.05"
+      ],
+      "objectives": [
+        "прочитать форму тензора",
+        "объяснить receptive field"
+      ],
+      "lab": "convolution",
+      "exercise": "ex-017",
+      "assessment": "q-017",
+      "project": "p-002"
+    },
+    {
+      "id": "3.04",
+      "title": "Последовательности и внимание",
+      "prerequisite_ids": [
+        "3.02"
+      ],
+      "objectives": [
+        "сравнить RNN и внимание",
+        "показать поток токенов"
+      ],
+      "lab": "transformer-flow",
+      "exercise": "ex-018",
+      "assessment": "q-018",
+      "project": "p-003"
+    },
+    {
+      "id": "3.05",
+      "title": "Эксперимент и остановка",
+      "prerequisite_ids": [
+        "3.03"
+      ],
+      "objectives": [
+        "сравнить эксперименты",
+        "выбрать early stopping"
+      ],
+      "lab": "experiment-tracker",
+      "exercise": "ex-019",
+      "assessment": "q-019",
+      "project": "p-002"
+    },
+    {
+      "id": "4.01",
+      "title": "Токенизация",
+      "prerequisite_ids": [
+        "3.04"
+      ],
+      "objectives": [
+        "разбить строку на токены",
+        "объяснить размер словаря"
+      ],
+      "lab": "tokenization",
+      "exercise": "ex-020",
+      "assessment": "q-020",
+      "project": "p-003"
+    },
+    {
+      "id": "4.02",
+      "title": "Query, Key, Value и внимание",
+      "prerequisite_ids": [
+        "3.04",
+        "1.05"
+      ],
+      "objectives": [
+        "прочитать тепловую карту",
+        "объяснить веса внимания"
+      ],
+      "lab": "attention-map",
+      "exercise": "ex-021",
+      "assessment": "q-021",
+      "project": "p-003"
+    },
+    {
+      "id": "4.03",
+      "title": "Архитектура Transformer",
+      "prerequisite_ids": [
+        "4.02"
+      ],
+      "objectives": [
+        "назвать блоки архитектуры",
+        "связать позиционное кодирование"
+      ],
+      "lab": "transformer-flow",
+      "exercise": "ex-022",
+      "assessment": "q-022",
+      "project": "p-003"
+    },
+    {
+      "id": "4.04",
+      "title": "Векторные представления",
+      "prerequisite_ids": [
+        "4.01"
+      ],
+      "objectives": [
+        "сравнить расстояния",
+        "объяснить близость смыслов"
+      ],
+      "lab": "embedding-space",
+      "exercise": "ex-023",
+      "assessment": "q-023",
+      "project": "p-003"
+    },
+    {
+      "id": "4.05",
+      "title": "Стратегии вывода",
+      "prerequisite_ids": [
+        "4.03"
+      ],
+      "objectives": [
+        "сравнить temperature",
+        "объяснить top-p"
+      ],
+      "lab": "decoding",
+      "exercise": "ex-024",
+      "assessment": "q-024",
+      "project": "p-003"
+    },
+    {
+      "id": "4.06",
+      "title": "Дообучение и LoRA",
+      "prerequisite_ids": [
+        "4.03"
+      ],
+      "objectives": [
+        "описать PEFT",
+        "выбрать данные для дообучения"
+      ],
+      "lab": "model-card",
+      "exercise": "ex-025",
+      "assessment": "q-025",
+      "project": "p-003"
+    },
+    {
+      "id": "4.07",
+      "title": "Проверка фактов и защита",
+      "prerequisite_ids": [
+        "4.05"
+      ],
+      "objectives": [
+        "найти галлюцинацию",
+        "сформулировать защитное ограничение"
+      ],
+      "lab": "prompt-safety",
+      "exercise": "ex-026",
+      "assessment": "q-026",
+      "project": "p-003"
+    },
+    {
+      "id": "4.08",
+      "title": "Поиск с дополнением контекста",
+      "prerequisite_ids": [
+        "4.04",
+        "4.07"
+      ],
+      "objectives": [
+        "разбить документ",
+        "показать цитату источника"
+      ],
+      "lab": "rag-retrieval",
+      "exercise": "ex-027",
+      "assessment": "q-027",
+      "project": "p-003"
+    },
+    {
+      "id": "4.09",
+      "title": "Веса, параметры и память модели",
+      "prerequisite_ids": [
+        "4.03",
+        "1.05"
+      ],
+      "objectives": [
+        "отличить параметр от активации",
+        "оценить память весов",
+        "объяснить квантизацию"
+      ],
+      "lab": "memory-budget",
+      "exercise": "ex-032",
+      "assessment": "q-031",
+      "project": "p-003"
+    },
+    {
+      "id": "4.10",
+      "title": "Инференс: от запроса до ответа",
+      "prerequisite_ids": [
+        "4.05",
+        "4.09"
+      ],
+      "objectives": [
+        "описать прямой проход токенов",
+        "сравнить задержку и пропускную способность",
+        "объяснить KV-кэш"
+      ],
+      "lab": "inference-flow",
+      "exercise": "ex-033",
+      "assessment": "q-032",
+      "project": "p-003"
+    },
+    {
+      "id": "4.11",
+      "title": "Как подбирать оборудование",
+      "prerequisite_ids": [
+        "4.09",
+        "4.10"
+      ],
+      "objectives": [
+        "оценить объём VRAM",
+        "выбрать CPU GPU или локальный режим",
+        "сопоставить качество стоимость и задержку"
+      ],
+      "lab": "hardware-selector",
+      "exercise": "ex-034",
+      "assessment": "q-033",
+      "project": "p-004"
+    },
+    {
+      "id": "4.12",
+      "title": "Как обучается языковая модель",
+      "prerequisite_ids": [
+        "4.06",
+        "4.09"
+      ],
+      "objectives": [
+        "сравнить предварительное обучение и дообучение",
+        "описать поток данных и обновление весов",
+        "назвать узкие места обучения"
+      ],
+      "lab": "training-loop",
+      "exercise": "ex-035",
+      "assessment": "q-034",
+      "project": "p-003"
+    },
+    {
+      "id": "4.13",
+      "title": "API, локальные и открытые модели",
+      "prerequisite_ids": [
+        "4.10",
+        "4.11"
+      ],
+      "objectives": [
+        "выбрать способ запуска",
+        "сравнить приватность и стоимость",
+        "составить план пилота"
+      ],
+      "lab": "model-choice",
+      "exercise": "ex-036",
+      "assessment": "q-035",
+      "project": "p-004"
+    },
+    {
+      "id": "5.01",
+      "title": "REST API и FastAPI",
+      "prerequisite_ids": [
+        "2.06"
+      ],
+      "objectives": [
+        "описать endpoint",
+        "добавить проверку входа"
+      ],
+      "lab": "api-design",
+      "exercise": "ex-028",
+      "assessment": "q-028",
+      "project": "p-004"
+    },
+    {
+      "id": "5.02",
+      "title": "Безопасное выполнение кода",
+      "prerequisite_ids": [
+        "5.01"
+      ],
+      "objectives": [
+        "назвать границы sandbox",
+        "составить лимиты ресурса"
+      ],
+      "lab": "sandbox",
+      "exercise": "ex-029",
+      "assessment": "q-029",
+      "project": "p-004"
+    },
+    {
+      "id": "5.03",
+      "title": "Наблюдаемость и стоимость",
+      "prerequisite_ids": [
+        "5.01"
+      ],
+      "objectives": [
+        "прочитать журнал",
+        "оценить задержку"
+      ],
+      "lab": "experiment-tracker",
+      "exercise": "ex-030",
+      "assessment": "q-030",
+      "project": "p-004"
+    },
+    {
+      "id": "5.04",
+      "title": "Итоговый проект и защита",
+      "prerequisite_ids": [
+        "5.02",
+        "5.03"
+      ],
+      "objectives": [
+        "защитить решение",
+        "описать ограничения и дальнейшее обучение"
+      ],
+      "lab": "project-defense",
+      "exercise": "ex-031",
+      "assessment": "final-exam",
+      "project": "p-004"
+    },
+    {
+      "id": "2.07",
+      "title": "Метод опорных векторов",
+      "prerequisite_ids": [
+        "2.05"
+      ],
+      "objectives": [
+        "объяснить зазор между классами",
+        "выбрать ядро и масштабирование",
+        "оценить влияние опорных объектов"
+      ],
+      "lab": "svm-boundary",
+      "exercise": "ex-041",
+      "assessment": "q-041",
+      "project": "p-001"
+    },
+    {
+      "id": "2.08",
+      "title": "Ансамблевые методы",
+      "prerequisite_ids": [
+        "2.05"
+      ],
+      "objectives": [
+        "сравнить бэггинг и бустинг",
+        "объяснить вклад слабых моделей",
+        "настроить число деревьев"
+      ],
+      "lab": "ensemble-comparison",
+      "exercise": "ex-042",
+      "assessment": "q-042",
+      "project": "p-001"
+    },
+    {
+      "id": "2.09",
+      "title": "Кластеризация и метод главных компонент",
+      "prerequisite_ids": [
+        "2.01",
+        "1.05"
+      ],
+      "objectives": [
+        "сгруппировать объекты без меток",
+        "сжать признаки методом главных компонент",
+        "объяснить выбор числа компонент"
+      ],
+      "lab": "cluster-pca",
+      "exercise": "ex-043",
+      "assessment": "q-043",
+      "project": "p-001"
+    },
+    {
+      "id": "2.10",
+      "title": "Временные ряды и временная проверка",
+      "prerequisite_ids": [
+        "1.08"
+      ],
+      "objectives": [
+        "отделить прошлое от будущего",
+        "создать временные признаки",
+        "выбрать временную схему проверки"
+      ],
+      "lab": "time-series-split",
+      "exercise": "ex-044",
+      "assessment": "q-044",
+      "project": "p-006"
+    },
+    {
+      "id": "2.11",
+      "title": "Рекомендательные системы",
+      "prerequisite_ids": [
+        "2.05"
+      ],
+      "objectives": [
+        "составить рекомендацию top-k",
+        "оценить холодный старт",
+        "объяснить ограничение совместной фильтрации"
+      ],
+      "lab": "recommendation-topk",
+      "exercise": "ex-045",
+      "assessment": "q-045",
+      "project": "p-006"
+    },
+    {
+      "id": "3.06",
+      "title": "Графы и графовые данные",
+      "prerequisite_ids": [
+        "1.05",
+        "2.01"
+      ],
+      "objectives": [
+        "представить объект и связь графом",
+        "различить узел, ребро и атрибут",
+        "выбрать задачу на графе"
+      ],
+      "lab": "graph-playground",
+      "exercise": "ex-046",
+      "assessment": "q-046",
+      "project": "p-002"
+    },
+    {
+      "id": "3.07",
+      "title": "Графовые векторные представления",
+      "prerequisite_ids": [
+        "3.06",
+        "4.04"
+      ],
+      "objectives": [
+        "сравнить соседство узлов",
+        "получить вектор узла",
+        "найти похожие узлы по расстоянию"
+      ],
+      "lab": "graph-embedding",
+      "exercise": "ex-047",
+      "assessment": "q-047",
+      "project": "p-002"
+    },
+    {
+      "id": "3.08",
+      "title": "Передача сообщений и графовые нейронные сети",
+      "prerequisite_ids": [
+        "3.06",
+        "3.01"
+      ],
+      "objectives": [
+        "показать агрегацию соседей",
+        "объяснить слой передачи сообщений",
+        "сравнить задачу узла и графа"
+      ],
+      "lab": "graph-message-passing",
+      "exercise": "ex-048",
+      "assessment": "q-048",
+      "project": "p-002"
+    },
+    {
+      "id": "3.09",
+      "title": "Рекуррентные сети: RNN, LSTM и GRU",
+      "prerequisite_ids": [
+        "3.04",
+        "3.02"
+      ],
+      "objectives": [
+        "проследить скрытое состояние",
+        "объяснить ворота LSTM и GRU",
+        "сравнить устойчивость к длинному контексту"
+      ],
+      "lab": "rnn-flow",
+      "exercise": "ex-049",
+      "assessment": "q-049",
+      "project": "p-003"
+    },
+    {
+      "id": "4.14",
+      "title": "Гибридный поиск и повторное ранжирование",
+      "prerequisite_ids": [
+        "4.08",
+        "4.04"
+      ],
+      "objectives": [
+        "сравнить лексический и векторный поиск",
+        "объяснить повторное ранжирование",
+        "измерить полноту поиска"
+      ],
+      "lab": "hybrid-retrieval",
+      "exercise": "ex-037",
+      "assessment": "q-050",
+      "project": "p-003"
+    },
+    {
+      "id": "4.15",
+      "title": "Оценка RAG: найденный контекст и опора ответа",
+      "prerequisite_ids": [
+        "4.14"
+      ],
+      "objectives": [
+        "разделить ошибку поиска и генерации",
+        "проверить опору ответа на контекст",
+        "собрать набор контрольных вопросов"
+      ],
+      "lab": "rag-evaluation",
+      "exercise": "ex-038",
+      "assessment": "q-051",
+      "project": "p-003"
+    },
+    {
+      "id": "4.16",
+      "title": "Агенты: границы полномочий и контракты",
+      "prerequisite_ids": [
+        "4.07",
+        "4.15"
+      ],
+      "objectives": [
+        "описать контракт инструмента",
+        "ограничить полномочия",
+        "проверить цепочку вызовов"
+      ],
+      "lab": "agent-safety",
+      "exercise": "ex-039",
+      "assessment": "q-052",
+      "project": "p-004"
+    },
+    {
+      "id": "4.17",
+      "title": "Выбор между RAG, дообучением и инструментом",
+      "prerequisite_ids": [
+        "4.13",
+        "4.15",
+        "4.16"
+      ],
+      "objectives": [
+        "выбрать механизм по цели",
+        "сравнить стоимость и контроль",
+        "составить план пилота"
+      ],
+      "lab": "llm-architecture",
+      "exercise": "ex-040",
+      "assessment": "q-053",
+      "project": "p-004"
+    }
+  ]
+}

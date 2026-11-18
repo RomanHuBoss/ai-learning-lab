@@ -1,0 +1,18 @@
+.lesson-navigation{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:13px;padding:13px 16px}
+.lesson-navigation-current{min-width:0;display:flex;flex-direction:column;align-items:center;gap:3px;text-align:center}
+.lesson-navigation-current strong{max-width:460px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
+.lesson-navigation-current span:last-child{color:var(--text-muted);font-size:10px}
+.lesson-navigation button:disabled{cursor:not-allowed;opacity:.45;transform:none}
+.lesson-content{margin-bottom:13px}
+.lesson-content-header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:15px}
+.lesson-content-header h2{margin:3px 0 0;font-size:20px}
+.lesson-duration{color:var(--text-muted);white-space:nowrap;font-size:11px}
+.lesson-content-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px;color:var(--text-soft);font-size:12px}
+.lesson-content-grid h3{margin:0 0 7px;color:var(--text);font-size:13px}
+.lesson-content-grid p{margin:0 0 16px}
+.lesson-content-grid ul{margin:0 0 16px;padding-left:18px}
+.lesson-content-grid li+li{margin-top:5px}
+.lesson-code{margin-top:16px;border-top:1px solid var(--line);padding-top:13px}
+.lesson-code summary{cursor:pointer;color:var(--cyan);font-size:11px;font-weight:600}
+.lesson-code pre{overflow:auto;margin:10px 0 0;padding:13px;border-radius:9px;background:var(--surface-2);font:11px/1.5 "JetBrains Mono",monospace}
+@media (max-width:760px){.lesson-navigation{align-items:stretch;flex-direction:column}.lesson-navigation-current{order:-1}.lesson-navigation button{width:100%}.lesson-content-grid{grid-template-columns:1fr}}

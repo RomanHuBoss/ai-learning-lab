@@ -1,0 +1,68 @@
+from uuid import uuid4
+
+from fastapi.testclient import TestClient
+
+from api.database import SessionLocal
+from api.main import app
+from api.models import User
+
+
+client = TestClient(app)
+
+
+def register(name: str) -> tuple[dict, dict]:
+    response = client.post("/api/auth/register", json={"email": f"{name}-{uuid4().hex}@example.com", "display_name": name, "password": "SecurePass123!"})
+    token = response.json()["access_token"]
+    return response.json(), {"Authorization": f"Bearer {token}"}
+
+
+def test_profile_visibility_and_alumni_catalog():
+    user, headers = register("Выпускник")
+    update = client.put("/api/profile/me", headers=headers, json={"bio": "Инженер ML", "status": "graduate", "level": "младший практик", "interests": ["GNN", "RAG"], "completion_percent": 100, "final_exam_passed": True, "publish_in_catalog": True})
+    assert update.status_code == 200
+    with SessionLocal() as db:
+        db.get(User, user["user"]["id"]).profile.final_exam_passed = True
+        db.commit()
+    visibility = client.put("/api/profile/me/visibility", headers=headers, json={"scope": "catalog", "show_projects": True, "show_certificates": True})
+    assert visibility.status_code == 200
+    project = client.post("/api/profile/me/projects", headers=headers, json={"title": "RAG-помощник", "summary": "Поиск по учебным материалам", "is_public": True})
+    assert project.status_code == 200
+    catalog = client.get("/api/alumni", params={"q": "GNN"})
+    assert catalog.status_code == 200
+    assert any(item["user_id"] == user["user"]["id"] for item in catalog.json())
+    exported = client.get("/api/me/export", headers=headers)
+    assert exported.status_code == 200
+    assert exported.json()["user"]["id"] == user["user"]["id"]
+
+
+def test_mentor_dashboard_and_admin_export():
+    admin, admin_headers = register("Наставник")
+    admin_id = admin["user"]["id"]
+    with SessionLocal() as db:
+        db.get(User, admin_id).role = "mentor"
+        db.commit()
+    cohort = client.post("/api/cohorts", headers=admin_headers, json={"name": "Поток выпускников"})
+    assert cohort.status_code == 201
+    learner, learner_headers = register("Участник")
+    joined = client.post("/api/cohorts/join", headers=learner_headers, params={"invite_code": cohort.json()["invite_code"]})
+    assert joined.status_code == 200
+    dashboard = client.get(f"/api/mentor/cohorts/{cohort.json()['id']}/dashboard", headers=admin_headers)
+    assert dashboard.status_code == 200
+    assert dashboard.json()["member_count"] >= 2
+    with SessionLocal() as db:
+        db.get(User, admin_id).role = "admin"
+        db.commit()
+    assert client.get("/api/admin/dashboard", headers=admin_headers).status_code == 200
+    export = client.get("/api/admin/export/alumni.csv", headers=admin_headers)
+    assert export.status_code == 200
+    assert "display_name" in export.text
+
+
+def test_profile_data_export_and_account_deletion():
+    user, headers = register("Удаляемый пользователь")
+    exported = client.get("/api/me/export", headers=headers)
+    assert exported.status_code == 200
+    assert exported.json()["user"]["display_name"] == "Удаляемый пользователь"
+    deleted = client.delete("/api/me/account", headers=headers)
+    assert deleted.status_code == 204
+    assert client.get("/api/auth/me", headers=headers).status_code == 401

@@ -1,0 +1,37 @@
+-- PostgreSQL-compatible baseline schema for the first deployment.
+CREATE TABLE IF NOT EXISTS users (
+  id SERIAL PRIMARY KEY,
+  email VARCHAR(320) UNIQUE NOT NULL,
+  display_name VARCHAR(120) NOT NULL,
+  password_hash TEXT NOT NULL,
+  role VARCHAR(32) NOT NULL DEFAULT 'learner',
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS cohorts (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(120) NOT NULL,
+  invite_code VARCHAR(32) UNIQUE NOT NULL,
+  owner_id INTEGER NOT NULL REFERENCES users(id),
+  is_archived BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS cohort_memberships (
+  id SERIAL PRIMARY KEY,
+  cohort_id INTEGER NOT NULL REFERENCES cohorts(id) ON DELETE CASCADE,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  membership_role VARCHAR(32) NOT NULL DEFAULT 'learner',
+  joined_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT uq_cohort_user UNIQUE (cohort_id, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS progress_records (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER UNIQUE NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  completed_lessons TEXT NOT NULL DEFAULT '[]',
+  mastery TEXT NOT NULL DEFAULT '{}',
+  next_review TEXT NOT NULL DEFAULT '[]',
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
