@@ -36,3 +36,9 @@ tar -xzf ai-learning-lab-content-YYYY-MM-DD.tar.gz
 CI выполняет проверку JSON, content lint, тесты Python, проверку JavaScript, `docker compose config`, сборку образов и smoke test `/health/live` и `/health/ready`.
 
 Зарегистрированные пользователи используют PostgreSQL progress store. Versioned migrations применяются через `scripts/migrate.py`, а CI дважды проверяет идемпотентность, seed demo accounts и backup/restore PostgreSQL. Профили, visibility consent, каталог выпускников, mentor/admin views и CSV-экспорт включены в миграцию `002_profiles_catalog.sql`.
+
+## Публикация на shared-hosting без root-доступа
+
+Если виртуальный хост обслуживается связкой Nginx и Apache, а доступ к Docker есть только у root, frontend можно разместить в каталоге домена, а API запустить от пользователя сайта на loopback-порту. Каталог `infra/apache-api-proxy` содержит PHP-прокси для `/api/*`, который передаёт запросы локальному Uvicorn. Системные health URL можно отдать статическими файлами из `infra/static-health`.
+
+Прокси требует PHP cURL и rewrite для каталога `api`. Процесс API должен запускаться через пользовательский supervisor, systemd user service с включённым linger или detached screen/tmux. Секреты хранятся в отдельном `.env` с правами `0600`.
