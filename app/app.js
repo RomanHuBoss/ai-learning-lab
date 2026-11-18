@@ -151,7 +151,15 @@ async function loadLessons() {
     if (!state.lessons.some((lesson) => lesson.id === state.lessonId)) state.lessonId = state.lessons[0].id;
     renderLesson();
   } catch (error) {
-    console.info('Локальный каталог уроков использует встроенную копию', error);
+    try {
+      const [program, content] = await Promise.all([fetchJson('/data/full_program.json'), fetchJson('/data/lesson_content.json')]);
+      state.lessons = (program.lessons || []).map((lesson) => ({...lesson, id: normalizeLessonId(lesson.id), lab: lesson.lab || lesson.lab_id}));
+      (content.lessons || []).forEach((lesson) => state.lessonContent.set(normalizeLessonId(lesson.lesson_id), lesson));
+      if (!state.lessons.some((lesson) => lesson.id === state.lessonId)) state.lessonId = state.lessons[0].id;
+      renderLesson();
+    } catch (fallbackError) {
+      console.info('Локальный каталог уроков использует встроенную копию', fallbackError);
+    }
   }
 }
 
