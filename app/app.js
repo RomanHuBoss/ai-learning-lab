@@ -18,7 +18,8 @@ const state = {
   selectedTerm: null,
   taskQuestion: null,
   exam: {attemptId: null, questions: []},
-  tooltips: new Map()
+  tooltips: new Map(),
+  modalReturnFocus: null
 };
 
 let routeHistoryInitialized = false;
@@ -537,6 +538,7 @@ function renderInteractiveLab(content, lesson) {
     'project-defense': '<label class="generic-control">Критерий защиты<select data-lab-input="criterion"><option>Воспроизводимость</option><option>Метрики и ограничения</option><option>План развития</option></select></label><div class="generic-result" data-lab-result>Сформулируйте доказательство результата и следующий шаг.</div>',
   }[kind] || '<label class="generic-control">Интенсивность опыта<input type="range" min="0" max="100" value="50" data-lab-input="intensity"><output data-lab-output="intensity">50</output></label><button class="button button-primary" data-action="generic-lab-run">Запустить опыт</button><div class="generic-result" data-lab-result>Готово к запуску. Измените параметр и проверьте гипотезу.</div>';
   generic.innerHTML = `<div class="generic-lab-header"><div><span class="generic-lab-kind">ИНТЕРАКТИВНАЯ ЛАБОРАТОРИЯ · ${escapeHtml(labKindLabel(kind))}</span><h2>${escapeHtml(title)}</h2><p>${escapeHtml(description)}</p></div><button class="button button-primary" data-action="generic-lab-run">Запустить опыт</button></div><div class="generic-lab-body"><div class="generic-visual">${visual}</div><div class="generic-controls">${controls}</div></div><div class="generic-lab-footer"><span>Связанные понятия: ${(content.learning_objectives || lesson.objectives || []).slice(0, 3).map(escapeHtml).join(' · ')}</span></div>`;
+  generic.querySelectorAll('.generic-result').forEach((result) => { result.setAttribute('role', 'status'); result.setAttribute('aria-live', 'polite'); });
   updateGenericLab();
 }
 
@@ -649,12 +651,18 @@ async function loadCurrentUser() {
 }
 
 function openModal(title, body, actions = '') {
+  state.modalReturnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
   $('#modal-content').innerHTML = `<p class="panel-kicker">AI LEARNING LAB</p><h2 id="modal-title">${title}</h2>${body}${actions ? `<div class="modal-actions">${actions}</div>` : ''}`;
   $('#modal-backdrop').hidden = false;
   $('.modal-close').focus();
 }
 
-function closeModal() { $('#modal-backdrop').hidden = true; }
+function closeModal() {
+  const returnFocus = state.modalReturnFocus;
+  state.modalReturnFocus = null;
+  $('#modal-backdrop').hidden = true;
+  if (returnFocus?.isConnected && !returnFocus.hidden) requestAnimationFrame(() => returnFocus.focus());
+}
 
 function drawLab() {
   const canvas = $('#gradient-canvas');
@@ -1184,7 +1192,18 @@ $$('[data-theme-choice]').forEach((button) => button.addEventListener('click', (
 $('#reduce-motion').addEventListener('change', (event) => document.documentElement.classList.toggle('reduced-motion', event.target.checked));
 $('#font-size')?.addEventListener('input', (event) => { state.fontSize = Number(event.target.value); applyTypography(); });
 window.addEventListener('resize', () => { if (state.view === 'lab') drawLab(); });
-document.addEventListener('keydown', (event) => { if (event.key === 'Escape') closeModal(); });
+document.addEventListener('keydown', (event) => {
+  const backdrop = $('#modal-backdrop');
+  if (!backdrop || backdrop.hidden) return;
+  if (event.key === 'Escape') { event.preventDefault(); closeModal(); return; }
+  if (event.key !== 'Tab') return;
+  const focusable = $$('button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])', backdrop).filter((item) => item.offsetParent !== null);
+  if (!focusable.length) return;
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+  if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+});
 document.addEventListener('keydown', (event) => {
   if (!['Enter', ' '].includes(event.key)) return;
   const actionButton = event.target.closest('[data-action]');
