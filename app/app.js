@@ -83,6 +83,7 @@ function applyRoleVisibility() {
   });
   $$('[data-authenticated-only]').forEach((element) => { element.hidden = !state.currentUser; });
   $$('[data-progress-only]').forEach((element) => { element.hidden = !state.currentUser || state.progress <= 0; });
+  $$('[data-zero-progress]').forEach((element) => { element.hidden = state.progress > 0; });
   $$('[data-guest-only]').forEach((element) => { element.hidden = Boolean(state.currentUser); });
 }
 
