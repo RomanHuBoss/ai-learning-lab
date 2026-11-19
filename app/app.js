@@ -1,5 +1,6 @@
 const savedFontSize = Number(localStorage.getItem('ailab:font-size'));
 const savedRoute = window.history.state?.ailabRoute ? window.history.state : null;
+if ('scrollRestoration' in window.history) window.history.scrollRestoration = 'manual';
 
 const state = {
   view: savedRoute?.view || localStorage.getItem('ailab:view') || 'dashboard',
@@ -217,6 +218,7 @@ function restoreRoute(route) {
   if (state.view === 'lab') renderLesson();
   restoringRoute = false;
   persist();
+  requestAnimationFrame(() => window.scrollTo({top: 0, left: 0, behavior: 'auto'}));
 }
 
 function setView(view) {
