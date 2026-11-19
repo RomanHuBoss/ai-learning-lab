@@ -115,5 +115,9 @@ h1,h2,h3{font-family:Helvetica,Arial,Verdana,sans-serif}
 /* Шапка остаётся на месте при чтении длинной лекции. */
 .topbar{position:sticky;top:0;z-index:12;background:var(--bg)}
 .main-wrap{width:0;flex:1 1 0%;min-width:0}
+.app-shell{display:grid;grid-template-columns:276px minmax(0,1fr)}
+.main-wrap{width:auto;flex:0 1 auto;min-width:0}
+@media(max-width:1200px){.app-shell{grid-template-columns:228px minmax(0,1fr)}}
+@media(max-width:900px){.app-shell{grid-template-columns:minmax(0,1fr)}}
 
 .exam-guide{display:flex;align-items:flex-start;gap:24px;margin-bottom:13px}.exam-guide h2{margin:3px 0 0;font-size:19px}.exam-guide ol{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:0;padding:0;list-style-position:inside;flex:1;color:var(--text-soft);font-size:13px}.exam-guide li{padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface-2)}@media(max-width:900px){.exam-guide{display:block}.exam-guide ol{margin-top:14px;grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:620px){.exam-guide ol{grid-template-columns:1fr}}
