@@ -318,7 +318,7 @@ function labKind(content, lesson) {
   if (value && value !== 'concept-map') return value;
   const title = `${lesson.title || ''} ${lesson.description || ''}`.toLowerCase();
   if (/граф|узл|ребр/.test(title)) return 'graph-playground';
-  if (/рекур|lstm|gru|последоват|временн|lag|walk-forward/.test(title)) return 'rnn-flow';
+  if (/рекур|lstm|gru|последоват|скрытое состояние|длинной зависим|временн|lag|walk-forward/.test(title)) return 'rnn-flow';
   if (/среднее|медиан|mae|mse|rmse|статист|bootstrap|корреляц|эксперимент|ошибки|метрик|качества|рекоменд|холодный старт|epsilon|regret/.test(title)) return 'metric-choice';
   if (/кластер|компонент/.test(title)) return 'tensor-shapes';
   if (/перцептрон|нейрон|активац|xor|прямой проход/.test(title)) return 'forward-pass';
