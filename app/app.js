@@ -6,6 +6,7 @@ const state = {
   view: savedRoute?.view || localStorage.getItem('ailab:view') || 'dashboard',
   theme: localStorage.getItem('ailab:theme') || 'dark',
   verboseTips: localStorage.getItem('ailab:verbose-tips') !== 'false',
+  reduceMotion: localStorage.getItem('ailab:reduce-motion') === 'true' || window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches,
   fontSize: Number.isFinite(savedFontSize) ? Math.max(17, savedFontSize) : 17,
   progress: localStorage.getItem('ailab:token') ? Number(localStorage.getItem('ailab:progress') || 0) : 0,
   lessonId: savedRoute?.lessonId || localStorage.getItem('ailab:lesson') || '1.01',
@@ -307,6 +308,12 @@ function applyVerboseTips() {
   const checkbox = $('#verbose-tips');
   if (checkbox) checkbox.checked = state.verboseTips;
   $$('[data-tooltip]').forEach((element) => { element.title = state.verboseTips ? element.dataset.tooltip : ''; });
+}
+
+function applyReduceMotion() {
+  const checkbox = $('#reduce-motion');
+  if (checkbox) checkbox.checked = state.reduceMotion;
+  document.documentElement.classList.toggle('reduced-motion', state.reduceMotion);
 }
 
 function routeSnapshot() {
@@ -1343,7 +1350,7 @@ $('#regularization').addEventListener('input', (event) => { $('#reg-value').text
 $('#term-search').addEventListener('input', (event) => renderTerms(event.target.value));
 $('#alumni-search')?.addEventListener('input', (event) => loadAlumni(event.target.value));
 $$('[data-theme-choice]').forEach((button) => button.addEventListener('click', () => { state.theme = button.dataset.themeChoice; applyTheme(); drawLab(); }));
-$('#reduce-motion').addEventListener('change', (event) => document.documentElement.classList.toggle('reduced-motion', event.target.checked));
+$('#reduce-motion')?.addEventListener('change', (event) => { state.reduceMotion = event.target.checked; localStorage.setItem('ailab:reduce-motion', String(state.reduceMotion)); applyReduceMotion(); });
 $('#verbose-tips')?.addEventListener('change', (event) => { state.verboseTips = event.target.checked; localStorage.setItem('ailab:verbose-tips', String(state.verboseTips)); applyVerboseTips(); showToast(state.verboseTips ? 'Подробные подсказки включены' : 'Подробные подсказки выключены'); });
 $('#font-size')?.addEventListener('input', (event) => { state.fontSize = Number(event.target.value); applyTypography(); });
 window.addEventListener('resize', () => { if (state.view === 'lab') drawLab(); });
@@ -1380,4 +1387,4 @@ $$('[data-tooltip]').forEach((element) => {
   if (!element.getAttribute('aria-label')) element.setAttribute('aria-label', `Подсказка. ${element.dataset.tooltip}`);
   element.title = state.verboseTips ? element.dataset.tooltip : '';
 });
-applyTheme(); applyTypography(); applyVerboseTips(); renderDashboardDate(); renderProgress(); renderTaskStats(); setView(state.view); renderTerms(); loadTerms(); loadLessons(); loadCurrentUser(); drawLab();
+applyTheme(); applyTypography(); applyVerboseTips(); applyReduceMotion(); renderDashboardDate(); renderProgress(); renderTaskStats(); setView(state.view); renderTerms(); loadTerms(); loadLessons(); loadCurrentUser(); drawLab();
