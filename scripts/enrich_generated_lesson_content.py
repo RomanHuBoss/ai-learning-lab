@@ -276,4 +276,14 @@ for lesson in content["lessons"]:
             "series": [{"name": "пример", "values": [1, 2, 3, 4]}],
         }
 
+for lesson in content["lessons"]:
+    module = int(lesson["lesson_id"].split(".", 1)[0])
+    title = lesson["title"].lower()
+    if module == 18:
+        lesson["interactive_lab"] = "graph-playground"
+    elif module == 19:
+        lesson["interactive_lab"] = "rnn-flow"
+    elif module == 21:
+        lesson["interactive_lab"] = "rnn-flow"
+
 CONTENT_PATH.write_text(json.dumps(content, ensure_ascii=False, indent=2) + "\n", encoding="utf8")
