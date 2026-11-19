@@ -73,11 +73,31 @@ def test_register_login_me_and_private_progress():
     token = register.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
     assert client.get("/api/auth/me", headers=headers).json()["email"] == email
-    payload = {"completed_lessons": ["4.09"], "mastery": {"llm": 61}, "next_review": ["Веса модели"]}
+    payload = {"completed_lessons": ["4.03"], "mastery": {"llm": 61}, "next_review": ["Веса модели"]}
     assert client.put("/api/me/progress", headers=headers, json=payload).json() == payload
     assert client.get("/api/me/progress", headers=headers).json() == payload
     login = client.post("/api/auth/login", json={"email": email, "password": "SecurePass123!"})
     assert login.status_code == 200
+
+
+def test_progress_rejects_unknown_lessons_and_updates_profile_completion():
+    registered = client.post("/api/auth/register", json={"email": f"validated-progress-{uuid4().hex}@example.com", "display_name": "Проверка прогресса", "password": "SecurePass123!"}).json()
+    headers = {"Authorization": f"Bearer {registered['access_token']}"}
+    invalid = client.put("/api/me/progress", headers=headers, json={"completed_lessons": ["9.99"], "mastery": {}, "next_review": []})
+    assert invalid.status_code == 422
+    valid = client.put("/api/me/progress", headers=headers, json={"completed_lessons": ["1.01"], "mastery": {"python": 50}, "next_review": []})
+    assert valid.status_code == 200
+    assert client.get("/api/profile/me", headers=headers).json()["completion_percent"] > 0
+
+
+def test_profile_cannot_self_assign_completion_or_graduate_status():
+    registered = client.post("/api/auth/register", json={"email": f"profile-integrity-{uuid4().hex}@example.com", "display_name": "Целостность профиля", "password": "SecurePass123!"}).json()
+    headers = {"Authorization": f"Bearer {registered['access_token']}"}
+    response = client.put("/api/profile/me", headers=headers, json={"status": "graduate", "completion_percent": 100, "final_exam_passed": True, "publish_in_catalog": True})
+    assert response.status_code == 409
+    profile = client.get("/api/profile/me", headers=headers).json()
+    assert profile["completion_percent"] == 0
+    assert profile["final_exam_passed"] is False
 
 
 def test_cohort_access_is_role_aware():

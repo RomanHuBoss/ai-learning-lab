@@ -18,11 +18,14 @@ def register(name: str) -> tuple[dict, dict]:
 
 def test_profile_visibility_and_alumni_catalog():
     user, headers = register("Выпускник")
-    update = client.put("/api/profile/me", headers=headers, json={"bio": "Инженер ML", "status": "graduate", "level": "младший практик", "interests": ["GNN", "RAG"], "completion_percent": 100, "final_exam_passed": True, "publish_in_catalog": True})
-    assert update.status_code == 200
+    lessons = client.get("/api/full-program").json()["lessons"]
+    progress = client.put("/api/me/progress", headers=headers, json={"completed_lessons": [lesson["id"] for lesson in lessons], "mastery": {"GNN": 100}, "next_review": []})
+    assert progress.status_code == 200
     with SessionLocal() as db:
         db.get(User, user["user"]["id"]).profile.final_exam_passed = True
         db.commit()
+    update = client.put("/api/profile/me", headers=headers, json={"bio": "Инженер ML", "status": "graduate", "level": "младший практик", "interests": ["GNN", "RAG"], "publish_in_catalog": True})
+    assert update.status_code == 200
     visibility = client.put("/api/profile/me/visibility", headers=headers, json={"scope": "catalog", "show_projects": True, "show_certificates": True})
     assert visibility.status_code == 200
     project = client.post("/api/profile/me/projects", headers=headers, json={"title": "RAG-помощник", "summary": "Поиск по учебным материалам", "is_public": True})

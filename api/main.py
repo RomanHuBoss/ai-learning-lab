@@ -4,6 +4,8 @@ import json
 import os
 import csv
 import io
+import re
+import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
@@ -51,14 +53,35 @@ progress_store: dict[str, ProgressPayload] = {
     )
 }
 
+
+def curriculum_lesson_ids() -> set[str]:
+    return {normalize_lesson_id(item.get("id")) for item in read_json("full_program.json").get("lessons", []) if item.get("id")}
+
+
+def normalize_lesson_id(value: Any) -> str:
+    return re.sub(r"^0(?=\d\.)", "", str(value or "").strip())
+
+
+def validate_progress_payload(payload: ProgressPayload) -> ProgressPayload:
+    valid_ids = curriculum_lesson_ids()
+    completed: list[str] = []
+    for lesson_id in payload.completed_lessons:
+        normalized = normalize_lesson_id(lesson_id)
+        if normalized not in valid_ids:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=f"Неизвестный урок: {normalized}")
+        if normalized not in completed:
+            completed.append(normalized)
+    mastery: dict[str, int] = {}
+    for concept, value in payload.mastery.items():
+        score = int(value)
+        if not 0 <= score <= 100:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=f"Оценка должна быть от 0 до 100: {concept}")
+        mastery[str(concept).strip()] = score
+    return ProgressPayload(completed_lessons=completed, mastery=mastery, next_review=payload.next_review)
+
 @asynccontextmanager
 async def lifespan(_application: FastAPI):
-    global db_ready
-    try:
-        init_db()
-        db_ready = True
-    except Exception:
-        db_ready = False
+    ensure_db_ready()
     yield
 
 
@@ -81,6 +104,21 @@ except Exception:
     db_ready = False
 
 
+def ensure_db_ready(retries: int = 15, delay_seconds: float = 2.0) -> bool:
+    global db_ready
+    if db_ready:
+        return True
+    for attempt in range(retries):
+        try:
+            init_db()
+            db_ready = True
+            return True
+        except Exception:
+            if attempt + 1 < retries:
+                time.sleep(delay_seconds)
+    return False
+
+
 @app.get("/health/live")
 def health_live() -> dict[str, str]:
     return {"status": "ok", "service": "ai-learning-lab"}
@@ -90,13 +128,16 @@ def health_live() -> dict[str, str]:
 def health_ready() -> dict[str, str]:
     required = [DATA / "curriculum.json", DATA / "full_program.json", DATA / "lesson_content.json", DATA / "labs.json", DATA / "terms.json", DATA / "questions.json", DATA / "projects.json"]
     database_ok = False
-    if db_ready:
-        try:
-            with SessionLocal() as db:
-                db.execute(text("SELECT 1"))
-                database_ok = True
-        except Exception:
-            database_ok = False
+    try:
+        global db_ready
+        if not db_ready:
+            init_db()
+        with SessionLocal() as db:
+            db.execute(text("SELECT 1"))
+            database_ok = True
+            db_ready = True
+    except Exception:
+        db_ready = False
     production = os.getenv("APP_ENV", "demo").lower() == "production"
     configured_secret = os.getenv("JWT_SECRET", os.getenv("SECRET_KEY", ""))
     secrets_ok = not production or (len(configured_secret) >= 32 and not configured_secret.startswith("change-me"))
@@ -400,8 +441,14 @@ def update_my_profile(payload: ProfilePayload, user: User = Depends(get_current_
     values = payload.model_dump()
     start_date = values.pop("start_date")
     values["interests"] = json.dumps(values["interests"], ensure_ascii=False)
-    if user.role == "learner":
-        values["final_exam_passed"] = profile.final_exam_passed
+    values.pop("completion_percent", None)
+    values.pop("final_exam_passed", None)
+    progress = db.scalar(select(ProgressRecord).where(ProgressRecord.user_id == user.id))
+    completion_percent = round(len(json.loads(progress.completed_lessons)) / max(len(curriculum_lesson_ids()), 1) * 100) if progress else 0
+    profile.completion_percent = completion_percent
+    requested_status = values.get("status", profile.status)
+    if requested_status in {"completed", "graduate"} and (completion_percent < 100 or not profile.final_exam_passed):
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Статус выпуска доступен после завершения курса и экзамена")
     profile.start_date = datetime.fromisoformat(start_date) if start_date else None
     for key, value in values.items():
         setattr(profile, key, value)
@@ -494,7 +541,7 @@ def mentor_dashboard(cohort_id: int, user: User = Depends(get_current_user), db:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Группа не найдена")
     if user.role != "admin" and cohort.owner_id != user.id and not db.scalar(select(CohortMembership).where(CohortMembership.cohort_id == cohort_id, CohortMembership.user_id == user.id)):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Нет доступа к группе")
-    lessons = [lesson["id"] for lesson in read_json("curriculum.json").get("lessons", [])]
+    lessons = [normalize_lesson_id(lesson["id"]) for lesson in read_json("full_program.json").get("lessons", [])]
     members = []
     for membership in cohort.memberships:
         record = db.scalar(select(ProgressRecord).where(ProgressRecord.user_id == membership.user_id))
@@ -671,8 +718,9 @@ def get_progress(user_id: str, user: User | None = Depends(get_optional_user)) -
 def put_progress(user_id: str, payload: ProgressPayload, user: User = Depends(get_current_user)) -> ProgressPayload:
     if str(user.id) != user_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Доступ к чужому прогрессу запрещён")
-    progress_store[user_id] = payload
-    return payload
+    normalized = validate_progress_payload(payload)
+    progress_store[user_id] = normalized
+    return normalized
 
 
 @app.get("/api/me/progress", response_model=ProgressPayload)
@@ -685,6 +733,7 @@ def get_my_progress(user: User = Depends(get_current_user), db: Session = Depend
 
 @app.put("/api/me/progress", response_model=ProgressPayload)
 def put_my_progress(payload: ProgressPayload, user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> ProgressPayload:
+    payload = validate_progress_payload(payload)
     record = db.scalar(select(ProgressRecord).where(ProgressRecord.user_id == user.id))
     values = {"completed_lessons": json.dumps(payload.completed_lessons, ensure_ascii=False), "mastery": json.dumps(payload.mastery, ensure_ascii=False), "next_review": json.dumps(payload.next_review, ensure_ascii=False)}
     if record:
@@ -692,6 +741,9 @@ def put_my_progress(payload: ProgressPayload, user: User = Depends(get_current_u
             setattr(record, key, value)
     else:
         db.add(ProgressRecord(user_id=user.id, **values))
+    profile = ensure_profile(db, user)
+    profile.completion_percent = round(len(payload.completed_lessons) / max(len(curriculum_lesson_ids()), 1) * 100)
+    audit_event(db, "progress.updated", user.id, "progress", str(user.id), {"completed_lessons": len(payload.completed_lessons), "completion_percent": profile.completion_percent})
     db.commit()
     return payload
 
