@@ -660,6 +660,22 @@ function updateGenericLab() {
     const missing = value('missing', 'median');
     const outlier = generic.querySelector('[data-lab-input="outlier"]')?.checked;
     result.textContent = `После очистки: ${missing === 'drop' ? 2 : 3} строки, 0 пропусков, ${outlier ? 0 : 1} выбросов`;
+  } else if (kind === 'tree-depth') {
+    const depth = Number(value('depth', 3));
+    const output = generic.querySelector('[data-lab-output="depth"]');
+    if (output) output.textContent = String(depth);
+    const trainError = Math.max(0.02, 0.48 * Math.pow(0.58, depth - 1));
+    const validationError = 0.16 + 0.025 * Math.pow(depth - 3, 2) + (depth > 5 ? 0.02 * (depth - 5) : 0);
+    const leaves = Math.min(2 ** depth, 32);
+    result.textContent = `Глубина ${depth} · ${leaves} возможных листьев · ошибка обучения ${(trainError * 100).toFixed(1).replace('.', ',')}% · ошибка проверки ${(validationError * 100).toFixed(1).replace('.', ',')}%`;
+  } else if (kind === 'tree-depth') {
+    const depth = Number(value('depth', 3));
+    const trainError = 0.03 + 0.42 * Math.exp(-0.58 * (depth - 1));
+    const validationError = 0.18 + 0.02 * (depth - 3) ** 2;
+    const recommendation = depth <= 3 ? 'модель ещё проста, но хорошо обобщает' : depth <= 5 ? 'баланс сложности и обобщения' : 'риск переобучения растёт';
+    const output = generic.querySelector('[data-lab-output="depth"]');
+    if (output) output.textContent = String(depth);
+    result.textContent = `Глубина ${depth}: ошибка обучения ${(trainError * 100).toFixed(1).replace('.', ',')}%, ошибка проверки ${(validationError * 100).toFixed(1).replace('.', ',')}% · ${recommendation}.`;
   } else {
     const input = generic.querySelector('[data-lab-input]');
     const output = generic.querySelector('[data-lab-output]');
