@@ -24,8 +24,17 @@ def test_profile_visibility_and_alumni_catalog():
     with SessionLocal() as db:
         db.get(User, user["user"]["id"]).profile.final_exam_passed = True
         db.commit()
-    update = client.put("/api/profile/me", headers=headers, json={"bio": "Инженер ML", "status": "graduate", "level": "младший практик", "interests": ["GNN", "RAG"], "publish_in_catalog": True})
+    update = client.put("/api/profile/me", headers=headers, json={"bio": "Инженер ML", "status": "graduate", "level": "младший практик", "interests": ["GNN", "RAG"], "city": "Казань", "country": "Россия", "cohort_name": "Поток 2026", "start_date": "2026-09-01", "portfolio_url": "https://example.com/portfolio", "publish_in_catalog": True})
     assert update.status_code == 200
+    restored = client.get("/api/profile/me", headers=headers)
+    assert restored.status_code == 200
+    assert restored.json()["level"] == "младший практик"
+    assert restored.json()["interests"] == ["GNN", "RAG"]
+    assert restored.json()["city"] == "Казань"
+    assert restored.json()["country"] == "Россия"
+    assert restored.json()["cohort_name"] == "Поток 2026"
+    assert restored.json()["start_date"].startswith("2026-09-01")
+    assert restored.json()["portfolio_url"] == "https://example.com/portfolio"
     visibility = client.put("/api/profile/me/visibility", headers=headers, json={"scope": "catalog", "show_projects": True, "show_certificates": True})
     assert visibility.status_code == 200
     project = client.post("/api/profile/me/projects", headers=headers, json={"title": "RAG-помощник", "summary": "Поиск по учебным материалам", "is_public": True})
@@ -49,6 +58,9 @@ def test_mentor_dashboard_and_admin_export():
     learner, learner_headers = register("Участник")
     joined = client.post("/api/cohorts/join", headers=learner_headers, params={"invite_code": cohort.json()["invite_code"]})
     assert joined.status_code == 200
+    joined_cohorts = client.get("/api/cohorts", headers=learner_headers)
+    assert joined_cohorts.status_code == 200
+    assert joined_cohorts.json()[0]["invite_code"] == cohort.json()["invite_code"]
     dashboard = client.get(f"/api/mentor/cohorts/{cohort.json()['id']}/dashboard", headers=admin_headers)
     assert dashboard.status_code == 200
     assert dashboard.json()["member_count"] >= 2
