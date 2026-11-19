@@ -222,7 +222,7 @@ function renderDashboardData() {
   const completedSet = new Set(completed.map(normalizeLessonId));
   const hasProgress = Boolean(state.currentUser && completed.length);
   const masteryPanel = $('#dashboard-mastery-panel');
-  if (masteryPanel) masteryPanel.hidden = !hasProgress || !Object.keys(state.mastery || {}).length;
+  if (masteryPanel) masteryPanel.hidden = !hasProgress;
   const masteryLabels = {python: 'Python и данные', math: 'Математика', classic_ml: 'Классическое ML', deep_learning: 'Нейронные сети'};
   const masteryList = $('#dashboard-mastery-list');
   if (masteryList) {
