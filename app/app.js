@@ -337,6 +337,7 @@ function labKind(content, lesson) {
 
 const labKindLabels = {
   'variable-playground': 'Переменные и выражения',
+  'type-inspector': 'Типы данных и коллекции',
   'data-cleaning': 'Очистка данных',
   'function-plot': 'График функции',
   'gradient-descent': 'Градиентный спуск',
@@ -386,6 +387,7 @@ function renderInteractiveLab(content, lesson) {
   const description = content.why_it_matters || lesson.description || 'Проверьте идею на небольшом интерактивном примере.';
   const visual = {
     'variable-playground': '<table><thead><tr><th>Имя</th><th>Значение</th><th>Тип</th></tr></thead><tbody><tr><td>x</td><td id="generic-x-value">3</td><td>int</td></tr><tr><td>name</td><td>AI Lab</td><td>str</td></tr><tr><td>enabled</td><td>True</td><td>bool</td></tr></tbody></table>',
+    'type-inspector': '<table><thead><tr><th>Значение</th><th>Тип</th><th>Доступная операция</th></tr></thead><tbody><tr><td>3</td><td>int</td><td>сложение</td></tr><tr><td>0,15</td><td>float</td><td>деление</td></tr><tr><td>[1, 2]</td><td>list</td><td>обход</td></tr></tbody></table>',
     'data-cleaning': '<table><thead><tr><th>row</th><th>value</th><th>status</th></tr></thead><tbody><tr><td>1</td><td>12.4</td><td>ok</td></tr><tr><td>2</td><td>—</td><td>missing</td></tr><tr><td>3</td><td>999.0</td><td>outlier</td></tr></tbody></table>',
     'tensor-shapes': '<svg viewBox="0 0 520 220" role="img" aria-label="Схема формы тензора"><rect x="60" y="45" width="150" height="110" rx="12" fill="rgba(125,211,252,.16)" stroke="#7dd3fc"/><rect x="250" y="72" width="150" height="56" rx="12" fill="rgba(167,139,250,.16)" stroke="#a78bfa"/><path d="M210 100h40" stroke="#67e8a5" stroke-width="4"/><text x="88" y="105" fill="currentColor">batch × channels × H × W</text><text x="277" y="105" fill="currentColor">2 × 3 × 28 × 28</text></svg>',
     'graph-playground': '<svg viewBox="0 0 520 220" role="img" aria-label="Граф с узлами и рёбрами"><path d="M110 110 L250 55 L400 115 L250 170 Z M110 110 L400 115" stroke="#7dd3fc" stroke-width="3" fill="none"/><circle cx="110" cy="110" r="24" fill="#17263c" stroke="#7dd3fc" stroke-width="3"/><circle cx="250" cy="55" r="24" fill="#17263c" stroke="#a78bfa" stroke-width="3"/><circle cx="400" cy="115" r="24" fill="#17263c" stroke="#67e8a5" stroke-width="3"/><circle cx="250" cy="170" r="24" fill="#17263c" stroke="#f4bf67" stroke-width="3"/><text x="103" y="116" fill="currentColor">A</text><text x="243" y="61" fill="currentColor">B</text><text x="393" y="121" fill="currentColor">C</text><text x="243" y="176" fill="currentColor">D</text></svg>',
@@ -409,6 +411,7 @@ function renderInteractiveLab(content, lesson) {
   }[kind] || '<svg viewBox="0 0 520 220" role="img" aria-label="Схема эксперимента"><path d="M40 170 C110 80 175 155 245 70 S370 140 480 45" fill="none" stroke="#7dd3fc" stroke-width="4"/><circle cx="245" cy="70" r="8" fill="#67e8a5"/><path d="M40 180 H480" stroke="rgba(148,163,184,.4)"/></svg>';
   const controls = {
     'variable-playground': '<label class="generic-control">Измените x<input type="range" min="0" max="10" value="3" data-lab-input="x"><output data-lab-output="x">3</output></label><div class="generic-result" data-lab-result>Вычисление: x + 1 = 4</div>',
+    'type-inspector': '<label class="generic-control">Выберите операцию<select data-lab-input="operation"><option>сложение чисел</option><option>обход списка</option><option>доступ по ключу</option></select></label><div class="generic-result" data-lab-result>Тип значения определяет допустимую операцию.</div>',
     'data-cleaning': '<label class="generic-control">Стратегия пропусков<select data-lab-input="missing"><option value="median">Заполнить медианой</option><option value="drop">Удалить строку</option></select></label><label class="generic-control">Обработать выброс<input type="checkbox" checked data-lab-input="outlier"></label><div class="generic-result" data-lab-result>После очистки: 3 строки, 0 пропусков, 0 выбросов</div>',
     'tensor-shapes': '<label class="generic-control">Размер batch<input type="number" min="1" max="128" value="2" data-lab-input="batch"></label><label class="generic-control">Каналы<input type="number" min="1" max="8" value="3" data-lab-input="channels"></label><div class="generic-result" data-lab-result>Форма [2, 3, 28, 28] · 4704 чисел</div>',
     'metric-choice': '<label class="generic-control">Порог классификации<input type="range" min="0" max="100" value="50" data-lab-input="threshold"><output data-lab-output="threshold">0.50</output></label><div class="generic-result" data-lab-result>Точность 0.78 · полнота 0.71 · F1 0.74</div>',
@@ -713,10 +716,15 @@ async function loadExams() {
 async function loadTaskForCurrentLesson() {
   const list = $('#task-answer-list');
   if (!list) return;
+  $('#task-question-title').textContent = 'Загрузка вопроса по текущему уроку…';
+  $('#task-question-context').textContent = 'Подбираем проверку, связанную с этой лекцией.';
+  $('#task-position').textContent = 'Загрузка вопроса';
+  list.innerHTML = '<div class="empty-state">Загрузка вариантов ответа…</div>';
   try {
     const bank = await fetchJson('/api/questions');
     const normalized = normalizeLessonId(state.lessonId);
-    const question = bank.find((item) => normalizeLessonId(item.lesson_id) === normalized) || bank[0];
+    const preferredId = state.lessonContent.get(normalized)?.mini_test;
+    const question = bank.find((item) => item.id === preferredId) || bank.find((item) => normalizeLessonId(item.lesson_id) === normalized) || bank[0];
     state.taskQuestion = question;
     state.selectedAnswer = null;
     const options = question.options || [];
