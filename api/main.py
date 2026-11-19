@@ -102,7 +102,7 @@ def health_ready() -> dict[str, str]:
     secrets_ok = not production or (len(configured_secret) >= 32 and not configured_secret.startswith("change-me"))
     if not all(path.exists() for path in required) or not database_ok or not secrets_ok:
         raise HTTPException(status_code=503, detail="content_not_ready")
-    return {"status": "ready", "content_version": "0.1.0"}
+    return {"status": "ready", "content_version": "0.2.0"}
 
 
 @app.post("/api/auth/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
