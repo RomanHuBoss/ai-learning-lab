@@ -1,10 +1,12 @@
 const savedFontSize = Number(localStorage.getItem('ailab:font-size'));
+const savedRoute = window.history.state?.ailabRoute ? window.history.state : null;
+
 const state = {
-  view: localStorage.getItem('ailab:view') || 'dashboard',
+  view: savedRoute?.view || localStorage.getItem('ailab:view') || 'dashboard',
   theme: localStorage.getItem('ailab:theme') || 'dark',
   fontSize: Number.isFinite(savedFontSize) ? Math.max(17, savedFontSize) : 17,
   progress: Number(localStorage.getItem('ailab:progress') || 0),
-  lessonId: localStorage.getItem('ailab:lesson') || '1.01',
+  lessonId: savedRoute?.lessonId || localStorage.getItem('ailab:lesson') || '1.01',
   lessons: [],
   modules: [],
   selectedModuleId: localStorage.getItem('ailab:module') || '',
@@ -17,6 +19,9 @@ const state = {
   exam: {attemptId: null, questions: []},
   tooltips: new Map()
 };
+
+let routeHistoryInitialized = false;
+let restoringRoute = false;
 
 let terms = [
   {ru:'Признак', en:'feature', symbol:'x', definition:'Измеряемое свойство объекта, которое модель использует для предсказания.', example:'Для цены квартиры признаками могут быть площадь, этаж и район.', related:['набор данных','целевая переменная'], lesson:'1.03'},
@@ -188,6 +193,32 @@ function applyTypography() {
   persist();
 }
 
+function routeSnapshot() {
+  return {view: state.view, lessonId: state.lessonId};
+}
+
+function sameRoute(left, right) {
+  return Boolean(left?.view && right?.view && left.view === right.view && (left.lessonId || '') === (right.lessonId || ''));
+}
+
+function syncRouteHistory(mode = 'push') {
+  const route = routeSnapshot();
+  const current = window.history.state;
+  if (mode === 'push' && sameRoute(current, route)) return;
+  const method = mode === 'replace' ? 'replaceState' : 'pushState';
+  window.history[method]({ailabRoute: true, ...route}, '', window.location.href);
+  routeHistoryInitialized = true;
+}
+
+function restoreRoute(route) {
+  restoringRoute = true;
+  if (route?.lessonId) state.lessonId = normalizeLessonId(route.lessonId);
+  setView(route?.view || 'dashboard');
+  if (state.view === 'lab') renderLesson();
+  restoringRoute = false;
+  persist();
+}
+
 function setView(view) {
   if (view === 'mentor' && !['mentor', 'instructor', 'admin'].includes(state.currentUser?.role)) view = 'dashboard';
   if (view === 'admin' && state.currentUser?.role !== 'admin') view = 'dashboard';
@@ -197,8 +228,10 @@ function setView(view) {
   $$('.view').forEach((section) => section.classList.toggle('active', section === target));
   $$('.nav-item').forEach((button) => button.classList.toggle('active', button.dataset.view === view));
   const nav = $(`.nav-item[data-view="${view}"]`);
-  $('#breadcrumb-current').textContent = nav ? nav.textContent.trim() : view;
+  const navLabel = nav?.querySelector(':scope > span:not(.nav-icon):not(.nav-count):not(.nav-indicator)')?.textContent.trim();
+  $('#breadcrumb-current').textContent = navLabel || view;
   persist();
+  if (!restoringRoute) syncRouteHistory(routeHistoryInitialized ? 'push' : 'replace');
   if (view === 'dashboard') renderDashboardLesson();
   if (view === 'lab') requestAnimationFrame(drawLab);
   if (view === 'alumni') loadAlumni($('#alumni-search')?.value || '');
@@ -208,6 +241,10 @@ function setView(view) {
   if (view === 'tasks') loadTaskForCurrentLesson();
   window.scrollTo({top: 0, behavior: 'auto'});
 }
+
+window.addEventListener('popstate', (event) => {
+  restoreRoute(event.state?.ailabRoute ? event.state : {view: 'dashboard', lessonId: state.lessonId});
+});
 
 const fallbackLessons = [
   {id:'1.01', title:'Переменные и выражения'},
@@ -318,9 +355,9 @@ function renderLesson() {
   const visualization = renderLessonVisualization(content);
   const formulas = renderLessonFormula(content);
   const remediation = content.remediation?.if_wrong || 'Вернитесь к предыдущему уроку и повторите ручной пример.';
-  const lessonLinks = `<div class="lesson-related-links"><span>Связи урока</span>${previous ? `<button class="text-button" data-action="open-lesson" data-lesson-id="${escapeHtml(previous.id)}">← Предыдущий урок · ${escapeHtml(lessonTitle(previous))}</button>` : '<span>Это первый урок курса</span>'}${next ? `<button class="text-button" data-action="open-lesson" data-lesson-id="${escapeHtml(next.id)}">Следующий урок · ${escapeHtml(lessonTitle(next))} →</button>` : '<span>Это последний урок курса</span>'}</div>`;
+  const lessonLinks = `<div class="lesson-related-links"><span>Навигация урока</span>${previous ? `<button class="text-button" data-action="open-lesson" data-lesson-id="${escapeHtml(previous.id)}">← Предыдущий урок · ${escapeHtml(lessonTitle(previous))}</button>` : '<span>Это первый урок курса</span>'}${next ? `<button class="text-button" data-action="open-lesson" data-lesson-id="${escapeHtml(next.id)}">Следующий урок · ${escapeHtml(lessonTitle(next))} →</button>` : '<span>Это последний урок курса</span>'}</div>`;
   const assessmentLink = `<button class="text-button lesson-inline-link" data-action="lesson-tasks">Пройти мини-тест к уроку →</button>`;
-  $('#lesson-content').innerHTML = `<div class="lesson-content-header"><div><span class="panel-kicker">ЛЕКЦИЯ · УРОК ${escapeHtml(lesson.id)}</span><h2>${escapeHtml(title)}</h2></div><span class="lesson-duration">${content.duration_minutes || lesson.duration_minutes || '—'} мин</span></div><div class="lesson-content-actions"><button class="button button-primary" data-action="lesson-lab">Открыть лабораторию ↓</button><button class="button button-ghost" data-action="lesson-tasks">Перейти к проверке →</button></div><details class="lesson-plan"><summary>План урока</summary><ol>${list(lessonPlan, ['Интуиция', 'Визуализация', 'Практика', 'Проверка понимания'])}</ol></details><div class="lesson-lecture-grid"><div><h3>Что уже известно</h3><ul>${list(known, ['Базовые понятия предыдущих уроков'])}</ul><h3>Цели урока</h3><ul>${list(objectives, ['Понять основную идею темы', 'Применить её в практике'])}</ul><h3>Интуиция</h3><p>${escapeHtml(content.intuition || 'Сначала сформулируйте идею своими словами, затем проверьте её на маленьком примере.')}</p><h3>Визуализация</h3>${visualization}<h3>Формальное объяснение</h3><p>${escapeHtml(content.formal_explanation || 'Свяжите обозначения, входы, выходы и ограничение метода.')}</p>${formulas}</div><div><h3>Почему это важно</h3><p>${escapeHtml(content.why_it_matters || 'Эта тема связывает фундаментальные понятия с рабочими ML/AI-сценариями.')}</p><h3>Ручной пример</h3><p>${escapeHtml(content.manual_example || 'Решите небольшой пример вручную и проверьте численный результат.')}</p><h3>Типичные заблуждения</h3><ul>${list(misconceptions, ['Не подменяйте интуицию формальным условием.', 'Проверяйте результат на новых данных.'])}</ul><h3>Проверка понимания</h3><p>Ответьте на вопрос по этой лекции и разберите объяснение ошибки. ${assessmentLink}</p><h3>Если ответ неверен</h3><p>${escapeHtml(remediation)}</p><h3>Короткое резюме</h3><ul>${list(summary, ['Повторите ключевую идею', 'Сделайте практическое упражнение'])}</ul></div></div>${content.code_example ? `<details class="lesson-code"><summary>Пример кода</summary><pre><code>${escapeHtml(content.code_example)}</code></pre></details>` : ''}${lessonLinks}<div class="lesson-content-footer"><span>Лаборатория <strong>${escapeHtml(labKindLabel(labKind(content, lesson)))}</strong></span><span>Практическое задание <strong>выполните в лаборатории</strong></span><button class="text-button" data-action="lesson-exam">Перейти к итоговому экзамену →</button></div>`;
+  $('#lesson-content').innerHTML = `<div class="lesson-content-header"><div><span class="panel-kicker">ЛЕКЦИЯ · УРОК ${escapeHtml(lesson.id)}</span><h2>${escapeHtml(title)}</h2></div><span class="lesson-duration">${content.duration_minutes || lesson.duration_minutes || '—'} мин</span></div><div class="lesson-content-actions"><button class="button button-primary" data-action="lesson-lab">Открыть лабораторию ↓</button><button class="button button-ghost" data-action="lesson-tasks">Перейти к проверке →</button></div><details class="lesson-plan"><summary>План урока</summary><ol>${list(lessonPlan, ['Интуиция', 'Визуализация', 'Практика', 'Проверка понимания'])}</ol></details><div class="lesson-lecture-grid"><div><h3>Что уже известно</h3><ul>${list(known, ['Базовые понятия предыдущих уроков'])}</ul><h3>Цели урока</h3><ul>${list(objectives, ['Понять основную идею темы', 'Применить её в практике'])}</ul><h3>Интуиция</h3><p>${escapeHtml(content.intuition || 'Сначала сформулируйте идею своими словами, затем проверьте её на маленьком примере.')}</p><h3>Визуализация</h3>${visualization}<h3>Формальное объяснение</h3><p>${escapeHtml(content.formal_explanation || 'Свяжите обозначения, входы, выходы и ограничение метода.')}</p>${formulas}</div><div><h3>Почему это важно</h3><p>${escapeHtml(content.why_it_matters || 'Эта тема связывает фундаментальные понятия с рабочими ML/AI-сценариями.')}</p><h3>Ручной пример</h3><p>${escapeHtml(content.manual_example || 'Решите небольшой пример вручную и проверьте численный результат.')}</p><h3>Типичные заблуждения</h3><ul>${list(misconceptions, ['Не подменяйте интуицию формальным условием.', 'Проверяйте результат на новых данных.'])}</ul><h3>Проверка понимания</h3><p>Ответьте на вопрос по этой лекции и разберите объяснение ошибки. ${assessmentLink}</p><h3>Если ответ неверен</h3><p>${escapeHtml(remediation)}</p><h3>Короткое резюме</h3><ul>${list(summary, ['Повторите ключевую идею', 'Сделайте практическое упражнение'])}</ul></div></div>${content.code_example ? `<details class="lesson-code"><summary>Пример кода</summary><pre><code>${escapeHtml(content.code_example)}</code></pre></details>` : ''}${lessonLinks}<div class="lesson-content-footer"><button class="text-button" data-action="lesson-exam">Открыть страницу экзамена →</button></div>`;
   persist();
   renderPathState();
   renderInteractiveLab(content, lesson);
@@ -523,6 +560,7 @@ async function loadLessons() {
     state.lessonId = normalizeLessonId(state.lessonId);
     if (!state.lessons.some((lesson) => lesson.id === state.lessonId)) state.lessonId = state.lessons[0].id;
     renderLesson();
+    if (routeHistoryInitialized) syncRouteHistory('replace');
   } catch (error) {
     try {
       const [program, content] = await Promise.all([fetchJson('/data/full_program.json'), fetchJson('/data/lesson_content.json')]);
@@ -531,6 +569,7 @@ async function loadLessons() {
       (content.lessons || []).forEach((lesson) => state.lessonContent.set(normalizeLessonId(lesson.lesson_id), lesson));
       if (!state.lessons.some((lesson) => lesson.id === state.lessonId)) state.lessonId = state.lessons[0].id;
       renderLesson();
+      if (routeHistoryInitialized) syncRouteHistory('replace');
     } catch (fallbackError) {
       console.info('Локальный каталог уроков использует встроенную копию', fallbackError);
     }
