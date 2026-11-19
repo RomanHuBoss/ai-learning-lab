@@ -206,7 +206,7 @@ function setView(view) {
   if (view === 'admin') loadAdminDashboard();
   if (view === 'exam') loadExams();
   if (view === 'tasks') loadTaskForCurrentLesson();
-  window.scrollTo({top: 0, behavior: document.documentElement.classList.contains('reduced-motion') ? 'auto' : 'smooth'});
+  window.scrollTo({top: 0, behavior: 'auto'});
 }
 
 const fallbackLessons = [
