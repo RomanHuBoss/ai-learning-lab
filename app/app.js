@@ -533,12 +533,16 @@ async function authRequest(mode) {
   const displayName = $('#auth-name')?.value.trim() || 'Ученик AI Learning Lab';
   const output = $('#auth-output');
   if (!email || !password || (mode === 'register' && displayName.length < 2)) { output.className = 'question-feedback bad'; output.textContent = 'Заполните имя, электронную почту и пароль.'; return; }
+  if (mode === 'register' && password.length < 10) { output.className = 'question-feedback bad'; output.textContent = 'Пароль должен содержать минимум 10 символов.'; return; }
   try {
     const endpoint = mode === 'register' ? '/api/auth/register' : '/api/auth/login';
     const body = mode === 'register' ? {email, password, display_name: displayName} : {email, password};
     const response = await fetch(endpoint, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
     const result = await response.json();
-    if (!response.ok) throw new Error(result.detail || 'Не удалось выполнить вход');
+    if (!response.ok) {
+      const detail = Array.isArray(result.detail) ? result.detail.map((item) => item.msg || 'Проверьте данные').join('. ') : result.detail;
+      throw new Error(detail || 'Не удалось выполнить вход');
+    }
     localStorage.setItem('ailab:token', result.access_token);
     applyUserState(result.user);
     await loadCurrentUser();
