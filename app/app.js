@@ -596,7 +596,7 @@ function renderInteractiveLab(content, lesson) {
   const layout = $('#lab-layout');
   const generic = $('#lab-generic');
   if (!layout || !generic) return;
-  const lessonLabOverrides = {'10.01': 'kmeans-lab', '10.03': 'pca-lab', '18.01': 'gnn-message', '18.03': 'gnn-message', '19.01': 'rnn-state', '19.03': 'lstm-gates'};
+  const lessonLabOverrides = {'2.01': 'type-inspector', '10.01': 'kmeans-lab', '10.03': 'pca-lab', '18.01': 'gnn-message', '18.03': 'gnn-message', '19.01': 'rnn-state', '19.03': 'lstm-gates'};
   const kind = lessonLabOverrides[lesson.id] || labKind(content, lesson);
   if (kind === 'gradient-descent') {
     layout.hidden = false;
