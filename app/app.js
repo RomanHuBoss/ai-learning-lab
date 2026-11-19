@@ -95,7 +95,7 @@ function renderPathGraph() {
   $('#path-module').textContent = String(Math.max(0, moduleIndex) + 1).padStart(2, '0');
   $('#path-module-name').textContent = moduleLabel(module);
   $('#path-module-title').textContent = `${moduleLabel(module)} · ${moduleLessons.length} урока`;
-  $('#path-module-description').textContent = module.description || module.focus || 'Уроки модуля связаны prerequisite-переходами.';
+  $('#path-module-description').textContent = module.description || 'Уроки модуля связаны последовательными переходами.';
   const positions = moduleLessons.map((_, index) => [120 + index * 240, 200]);
   const lines = moduleLessons.slice(1).map((_, index) => `<path d="M${positions[index][0]} 200 L${positions[index + 1][0]} 200"/>`).join('');
   const nodes = moduleLessons.map((lesson, index) => {
