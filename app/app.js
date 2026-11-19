@@ -69,6 +69,7 @@ function renderProgress() {
   renderNotificationState();
   renderPathState();
   renderDashboardData();
+  renderAchievements();
 }
 
 function renderNotificationState() {
@@ -250,6 +251,16 @@ function renderDashboardData() {
     const nextLesson = state.lessons.find((lesson) => !completedSet.has(normalizeLessonId(lesson.id)));
     milestonesList.innerHTML = hasProgress ? `<div class="milestone"><div class="milestone-icon">01</div><div><strong>Продолжить обучение</strong><span>${nextLesson ? `Следующий урок · ${escapeHtml(state.lessonContent.get(nextLesson.id)?.title || nextLesson.title)}` : 'Все уроки курса завершены'}</span></div><div class="milestone-progress"><strong>${Math.round(state.progress)}%</strong><span style="width:${Math.round(state.progress)}%"></span></div></div>` : '<div class="empty-state">Вехи появятся после первого завершённого урока.</div>';
   }
+}
+
+function renderAchievements() {
+  const list = $('#achievement-list');
+  if (!list) return;
+  const completed = state.completedLessons || [];
+  const achievements = [];
+  if (completed.length) achievements.push(`<article class="achievement-card earned"><div class="achievement-symbol">✦</div><div><span class="achievement-label">ПЕРВЫЙ УРОК</span><h2>Первые шаги</h2><p>Завершено уроков: ${completed.length}.</p></div></article>`);
+  if (state.taskStats.correct > 0) achievements.push(`<article class="achievement-card earned"><div class="achievement-symbol cyan-symbol">✓</div><div><span class="achievement-label">ПЕРВАЯ ПРОВЕРКА</span><h2>Проверка понятий</h2><p>Правильных ответов: ${state.taskStats.correct}.</p></div></article>`);
+  list.innerHTML = achievements.length ? achievements.join('') : '<article class="panel empty-state">Достижения появятся после первого завершённого урока или ответа.</article>';
 }
 
 function showToast(message, type = 'info') {
@@ -1050,6 +1061,7 @@ function checkAnswer() {
   state.taskStats.lastWrong = !isCorrect;
   localStorage.setItem('ailab:task-stats', JSON.stringify(state.taskStats));
   renderTaskStats();
+  renderAchievements();
   if (isCorrect) { feedback.className = 'question-feedback good'; feedback.textContent = state.taskQuestion?.solution || 'Верно. Разберите, почему этот ответ следует из лекции.'; $('#task-score').textContent = '1 / 1'; showToast('Ответ принят · +10 XP', 'success'); }
   else { feedback.className = 'question-feedback bad'; feedback.textContent = state.taskQuestion?.solution ? `Пока нет. Подсказка: ${state.taskQuestion.solution}` : 'Пока нет. Вернитесь к лекции и повторите пример.'; $('#task-score').textContent = '0 / 1'; }
 }
