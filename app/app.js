@@ -728,8 +728,9 @@ async function loadTaskForCurrentLesson() {
     state.taskQuestion = question;
     state.selectedAnswer = null;
     const options = question.options || [];
-    $('#task-badge').textContent = question.lesson_id ? `УРОК ${question.lesson_id}` : 'ПРОВЕРКА';
-    $('#task-position').textContent = `Вопрос по уроку ${question.lesson_id || normalized}`;
+    const normalizedQuestionId = normalizeLessonId(question.lesson_id || normalized);
+    $('#task-badge').textContent = question.lesson_id ? `УРОК ${normalizedQuestionId}` : 'ПРОВЕРКА';
+    $('#task-position').textContent = `Вопрос по уроку ${normalizedQuestionId}`;
     $('#task-difficulty').textContent = question.difficulty || '● ● ○';
     $('#task-question-title').textContent = question.prompt || 'Проверьте понимание темы.';
     $('#task-question-context').textContent = question.solution || 'Выберите ответ, затем разберите причину результата.';

@@ -130,4 +130,9 @@ for lesson_id, lesson in program_by_id.items():
         "remediation": {"if_wrong": "Вернитесь к предыдущему уроку и повторите числовой пример.", "next_link": normalize(lesson.get("prerequisite_ids", [""])[-1]) if lesson.get("prerequisite_ids") else None},
     })
 
+legacy_first_module_questions = {"1.01": "q-001", "1.02": "q-002", "1.03": "q-003", "1.04": "q-004"}
+for lesson_id, question_id in legacy_first_module_questions.items():
+    if lesson_id in content_by_id:
+        content_by_id[lesson_id]["mini_test"] = question_id
+
 (ROOT / "data/lesson_content.json").write_text(json.dumps(content, ensure_ascii=False, indent=2) + "\n", encoding="utf8")
