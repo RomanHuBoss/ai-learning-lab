@@ -88,6 +88,10 @@ def main() -> int:
     content_ids = {str(lesson.get("lesson_id", "")).lstrip("0") for lesson in lesson_content}
     if program_ids != content_ids:
         errors.append("lesson_content.json ids must match full_program.json")
+    question_lesson_ids = {str(question.get("lesson_id", "")).lstrip("0") for question in questions if question.get("lesson_id")}
+    unknown_question_lessons = sorted(question_lesson_ids - program_ids)
+    if unknown_question_lessons:
+        errors.append(f"questions.json contains unknown lesson ids: {unknown_question_lessons}")
     for lesson in lesson_content:
         missing = required_lesson_blocks - lesson.keys()
         if missing:
