@@ -230,11 +230,12 @@ function renderLesson() {
   state.lessonId = lesson.id;
   const content = state.lessonContent.get(lesson.id) || {};
   const title = content.title || lesson.title;
+  const lessonLabKind = labKind(content, lesson);
   const index = Math.max(0, state.lessons.findIndex((item) => item.id === lesson.id));
   const previous = state.lessons[index - 1];
   const next = state.lessons[index + 1];
   $('#lab-title').textContent = title;
-  $('#lab-lesson-kicker').textContent = `УРОК ${lesson.id} · ${lesson.lab || 'ПРАКТИКА'}`;
+  $('#lab-lesson-kicker').textContent = `УРОК ${lesson.id} · ${labKindLabel(lessonLabKind).toUpperCase()}`;
   $('#lab-lesson-lead').textContent = content.why_it_matters || lesson.objectives?.join(' · ') || 'Разберите тему на примере и закрепите её практикой.';
   $('#lesson-navigation-title').textContent = title;
   $('#lesson-navigation-position').textContent = `${index + 1} из ${state.lessons.length}`;
