@@ -41,6 +41,14 @@ def tokenize(text: str) -> list[str]:
     return [token.lower() for token in TOKEN_RE.findall(text)]
 
 
+def make_snippet(text: str, limit: int = 280) -> str:
+    """Return a compact citation fragment without an orphaned conjunction."""
+    snippet = " ".join(text.split())
+    if len(snippet) > limit:
+        snippet = snippet[: limit - 3].rstrip() + "…"
+    return re.sub(r"^(?:и|или|а|но)\s+", "", snippet, flags=re.IGNORECASE)
+
+
 class LocalRagIndex:
     def __init__(self) -> None:
         self._lock = RLock()
@@ -103,9 +111,7 @@ class LocalRagIndex:
             scored.sort(key=lambda item: item[0], reverse=True)
             hits: list[RagHit] = []
             for score, document in scored[: max(1, min(top_k, 10))]:
-                snippet = document.text.replace("\n", " ").strip()
-                if len(snippet) > 280:
-                    snippet = snippet[:277].rstrip() + "…"
+                snippet = make_snippet(document.text)
                 hits.append(RagHit(document.id, document.title, snippet, round(score, 4), f"[{document.title}]", document.lesson_id, document.metadata or {}))
             return hits
 

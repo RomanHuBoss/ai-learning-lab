@@ -25,6 +25,7 @@ def test_rag_returns_citations():
     payload = response.json()
     assert payload["grounded"] is True
     assert payload["citations"]
+    assert all(not item["snippet"].lower().startswith(("и ", "или ", "а ", "но ")) for item in payload["citations"])
 
 
 def test_rag_evaluation_reports_retrieval_and_grounding():
