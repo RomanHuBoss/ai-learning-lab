@@ -51,15 +51,21 @@ def main() -> None:
         admin = ensure_user(db, "admin@ai-learning.local", "Администратор", "admin", "AdminPass123!")
         mentor = ensure_user(db, "mentor@ai-learning.local", "Наставник", "mentor", "MentorPass123!")
         learner = ensure_user(db, "demo@ai-learning.local", "Демо-ученик", "learner", "DemoPass123!")
-        alumni = ensure_user(db, "alumni@ai-learning.local", "Выпускник AI Lab", "learner", "AlumniPass123!")
         ensure_profile(db, admin, status="learning", level="администратор")
         ensure_profile(db, mentor, status="learning", level="наставник")
         ensure_profile(db, learner, status="learning", level="начинающий")
-        alumni_profile = ensure_profile(db, alumni, status="graduate", level="младший практик", interests='["RAG", "GNN"]', completion_percent=100, final_exam_passed=True, publish_in_catalog=True)
-        alumni_profile.visibility.scope = "catalog"
-        alumni_profile.visibility.show_projects = True
-        if not db.scalar(select(ProjectPublication).where(ProjectPublication.user_id == alumni.id, ProjectPublication.title == "Учебный RAG-помощник")):
-            db.add(ProjectPublication(user_id=alumni.id, title="Учебный RAG-помощник", summary="Поиск по материалам курса с цитатами", is_public=True))
+        legacy_alumni = db.scalar(select(User).where(User.email == "alumni@ai-learning.local"))
+        if legacy_alumni:
+            legacy_profile = ensure_profile(db, legacy_alumni)
+            legacy_profile.status = "learning"
+            legacy_profile.completion_percent = 0
+            legacy_profile.final_exam_passed = False
+            legacy_profile.publish_in_catalog = False
+            legacy_profile.visibility.scope = "owner"
+            legacy_profile.visibility.show_projects = False
+            legacy_profile.visibility.show_certificates = False
+            for project in db.scalars(select(ProjectPublication).where(ProjectPublication.user_id == legacy_alumni.id)).all():
+                project.is_public = False
         cohort = db.scalar(select(Cohort).where(Cohort.invite_code == "AI-DEMO"))
         if not cohort:
             cohort = Cohort(name="Демо-поток AI Learning Lab", invite_code="AI-DEMO", owner_id=mentor.id)
