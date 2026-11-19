@@ -22,6 +22,7 @@ const state = {
   selectedAnswer: null,
   selectedTerm: null,
   taskQuestion: null,
+  taskSession: {questions: [], index: 0, answered: new Set()},
   taskStats: (() => { try { return JSON.parse(localStorage.getItem('ailab:task-stats') || '{"answered":0,"correct":0,"lastWrong":false}'); } catch { return {answered: 0, correct: 0, lastWrong: false}; } })(),
   exam: {attemptId: null, questions: []},
   tooltips: new Map(),
@@ -567,6 +568,11 @@ const labKindLabels = {
   'pipeline-sort': 'Конвейер данных',
   'classification-boundary': 'Граница классификации',
   'tree-depth': 'Глубина дерева',
+  'kmeans-lab': 'Кластеры и центроиды',
+  'pca-lab': 'Компоненты PCA',
+  'gnn-message': 'Передача сообщений в GNN',
+  'rnn-state': 'Скрытое состояние RNN',
+  'lstm-gates': 'Ворота LSTM',
   'confusion-matrix': 'Матрица ошибок',
   'forward-pass': 'Прямой проход',
   'backprop': 'Обратное распространение',
@@ -590,7 +596,8 @@ function renderInteractiveLab(content, lesson) {
   const layout = $('#lab-layout');
   const generic = $('#lab-generic');
   if (!layout || !generic) return;
-  const kind = labKind(content, lesson);
+  const lessonLabOverrides = {'10.01': 'kmeans-lab', '10.03': 'pca-lab', '18.01': 'gnn-message', '18.03': 'gnn-message', '19.01': 'rnn-state', '19.03': 'lstm-gates'};
+  const kind = lessonLabOverrides[lesson.id] || labKind(content, lesson);
   if (kind === 'gradient-descent') {
     layout.hidden = false;
     generic.hidden = true;
@@ -612,6 +619,11 @@ function renderInteractiveLab(content, lesson) {
     'pipeline-sort': '<table><thead><tr><th>Шаг</th><th>Результат</th></tr></thead><tbody><tr><td>1</td><td>Сбор данных</td></tr><tr><td>2</td><td>Проверка качества</td></tr><tr><td>3</td><td>Обучение модели</td></tr><tr><td>4</td><td>Оценка на отложенной выборке</td></tr></tbody></table>',
     'classification-boundary': '<svg viewBox="0 0 520 220" role="img" aria-label="Граница классификации"><path d="M40 185 L480 35" stroke="#f4bf67" stroke-width="4"/><circle cx="110" cy="150" r="8" fill="#7dd3fc"/><circle cx="170" cy="170" r="8" fill="#7dd3fc"/><circle cx="230" cy="120" r="8" fill="#7dd3fc"/><circle cx="310" cy="85" r="8" fill="#67e8a5"/><circle cx="380" cy="65" r="8" fill="#67e8a5"/><circle cx="430" cy="45" r="8" fill="#67e8a5"/></svg>',
     'tree-depth': '<svg viewBox="0 0 520 220" role="img" aria-label="Дерево решений"><path d="M260 42 V88 M260 88 L150 150 M260 88 L370 150" stroke="#7dd3fc" stroke-width="3"/><circle cx="260" cy="35" r="25" fill="#17263c" stroke="#a78bfa"/><circle cx="150" cy="158" r="25" fill="#17263c" stroke="#67e8a5"/><circle cx="370" cy="158" r="25" fill="#17263c" stroke="#f4bf67"/><text x="246" y="41" fill="currentColor">x₁?</text><text x="136" y="164" fill="currentColor">да</text><text x="356" y="164" fill="currentColor">нет</text></svg>',
+    'kmeans-lab': '<svg viewBox="0 0 520 220" role="img" aria-label="Точки и центроиды кластеров"><path d="M55 180 H470 M75 200 V35" stroke="rgba(148,163,184,.45)"/><circle cx="145" cy="150" r="7" fill="#7dd3fc"/><circle cx="180" cy="130" r="7" fill="#7dd3fc"/><circle cx="350" cy="70" r="7" fill="#f4bf67"/><circle cx="390" cy="95" r="7" fill="#f4bf67"/><path d="M160 140 L350 82" stroke="#a78bfa" stroke-dasharray="5 4"/><circle cx="160" cy="140" r="12" fill="none" stroke="#a78bfa" stroke-width="3"/><circle cx="370" cy="82" r="12" fill="none" stroke="#a78bfa" stroke-width="3"/></svg>',
+    'pca-lab': '<svg viewBox="0 0 520 220" role="img" aria-label="Главная компонента PCA"><path d="M55 180 H470 M75 200 V35" stroke="rgba(148,163,184,.45)"/><path d="M110 165 L420 55" stroke="#a78bfa" stroke-width="4"/><circle cx="150" cy="150" r="6" fill="#7dd3fc"/><circle cx="220" cy="125" r="6" fill="#7dd3fc"/><circle cx="300" cy="100" r="6" fill="#7dd3fc"/><circle cx="370" cy="75" r="6" fill="#7dd3fc"/></svg>',
+    'gnn-message': '<svg viewBox="0 0 520 220" role="img" aria-label="Агрегация признаков соседей в GNN"><path d="M120 110 L260 60 L400 110 L260 170 Z" fill="none" stroke="#7dd3fc" stroke-width="3"/><circle cx="120" cy="110" r="25" fill="#17263c" stroke="#7dd3fc" stroke-width="3"/><circle cx="260" cy="60" r="25" fill="#17263c" stroke="#f4bf67" stroke-width="3"/><circle cx="400" cy="110" r="25" fill="#17263c" stroke="#67e8a5" stroke-width="3"/><circle cx="260" cy="170" r="25" fill="#17263c" stroke="#a78bfa" stroke-width="3"/><text x="111" y="116" fill="currentColor">v</text><text x="252" y="66" fill="currentColor">u₁</text><text x="391" y="116" fill="currentColor">u₂</text><text x="250" y="176" fill="currentColor">m</text></svg>',
+    'rnn-state': '<svg viewBox="0 0 520 220" role="img" aria-label="Переход скрытого состояния RNN"><path d="M70 110 H450" stroke="#7dd3fc" stroke-width="4"/><rect x="70" y="72" width="80" height="76" rx="10" fill="#17263c" stroke="#7dd3fc"/><rect x="220" y="72" width="80" height="76" rx="10" fill="#17263c" stroke="#a78bfa"/><rect x="370" y="72" width="80" height="76" rx="10" fill="#17263c" stroke="#67e8a5"/><text x="92" y="115" fill="currentColor">x₁,h₀</text><text x="242" y="115" fill="currentColor">x₂,h₁</text><text x="392" y="115" fill="currentColor">h₂</text></svg>',
+    'lstm-gates': '<svg viewBox="0 0 520 220" role="img" aria-label="Ворота LSTM"><rect x="55" y="78" width="95" height="64" rx="10" fill="#17263c" stroke="#f4bf67"/><rect x="210" y="78" width="95" height="64" rx="10" fill="#17263c" stroke="#7dd3fc"/><rect x="365" y="78" width="95" height="64" rx="10" fill="#17263c" stroke="#67e8a5"/><path d="M150 110h60 M305 110h60" stroke="#a78bfa" stroke-width="3"/><text x="77" y="115" fill="currentColor">забыть</text><text x="232" y="115" fill="currentColor">записать</text><text x="389" y="115" fill="currentColor">выход</text></svg>',
     'confusion-matrix': '<table><thead><tr><th></th><th>Предсказано +</th><th>Предсказано −</th></tr></thead><tbody><tr><th>Факт +</th><td>TP · 42</td><td>FN · 8</td></tr><tr><th>Факт −</th><td>FP · 5</td><td>TN · 45</td></tr></tbody></table>',
     'forward-pass': '<svg viewBox="0 0 520 220" role="img" aria-label="Прямой проход нейронной сети"><path d="M90 55 L260 110 L430 55 M90 165 L260 110 L430 165" stroke="#7dd3fc" stroke-width="3"/><circle cx="90" cy="55" r="20" fill="#17263c" stroke="#7dd3fc"/><circle cx="90" cy="165" r="20" fill="#17263c" stroke="#7dd3fc"/><circle cx="260" cy="110" r="25" fill="#17263c" stroke="#a78bfa"/><circle cx="430" cy="55" r="20" fill="#17263c" stroke="#67e8a5"/><circle cx="430" cy="165" r="20" fill="#17263c" stroke="#67e8a5"/></svg>',
     'backprop': '<svg viewBox="0 0 520 220" role="img" aria-label="Обратное распространение ошибки"><path d="M430 110 H90" stroke="#f4bf67" stroke-width="4"/><path d="M115 100 l-25 10 25 10" fill="none" stroke="#f4bf67" stroke-width="3"/><circle cx="430" cy="110" r="28" fill="#17263c" stroke="#67e8a5"/><circle cx="260" cy="110" r="28" fill="#17263c" stroke="#a78bfa"/><circle cx="90" cy="110" r="28" fill="#17263c" stroke="#7dd3fc"/></svg>',
@@ -637,6 +649,11 @@ function renderInteractiveLab(content, lesson) {
     'pipeline-sort': '<label class="generic-control">Порядок конвейера<select data-lab-input="order"><option>данные → проверка → обучение → оценка</option><option>обучение → данные → оценка → проверка</option></select></label><div class="generic-result" data-lab-result>Проверьте, что оценка выполняется на отложенных данных.</div>',
     'classification-boundary': '<label class="generic-control">Порог решения<input type="range" min="10" max="90" value="50" data-lab-input="threshold"><output data-lab-output="threshold">0.50</output></label><div class="generic-result" data-lab-result>Сдвиньте границу и сравните ошибки двух классов.</div>',
     'tree-depth': '<label class="generic-control">Глубина дерева<input type="range" min="1" max="8" value="3" data-lab-input="depth"><output data-lab-output="depth">3</output></label><div class="generic-result" data-lab-result>Большая глубина снижает ошибку на обучении, но повышает риск переобучения.</div>',
+    'kmeans-lab': '<label class="generic-control">Число кластеров k<input type="range" min="2" max="4" value="2" data-lab-input="clusters"><output data-lab-output="clusters">2</output></label><label class="generic-control">Итерация<input type="range" min="0" max="3" value="0" data-lab-input="iteration"><output data-lab-output="iteration">0</output></label><div class="generic-result" data-lab-result>Запустите шаг назначения и пересчёта центроидов.</div>',
+    'pca-lab': '<label class="generic-control">Оставить компонент<input type="range" min="1" max="2" value="1" data-lab-input="components"><output data-lab-output="components">1</output></label><div class="generic-result" data-lab-result>Выберите число компонент и сравните накопленную дисперсию.</div>',
+    'gnn-message': '<label class="generic-control">Признак соседа u₁<input type="range" min="0" max="10" value="2" data-lab-input="neighbor-one"><output data-lab-output="neighbor-one">2</output></label><label class="generic-control">Признак соседа u₂<input type="range" min="0" max="10" value="6" data-lab-input="neighbor-two"><output data-lab-output="neighbor-two">6</output></label><div class="generic-result" data-lab-result>Среднее сообщение соседей: 4,00.</div>',
+    'rnn-state': '<label class="generic-control">Текущий вход xₜ<input type="range" min="0" max="10" value="2" data-lab-input="rnn-input"><output data-lab-output="rnn-input">2</output></label><label class="generic-control">Предыдущее hₜ₋₁<input type="range" min="0" max="10" value="1" data-lab-input="rnn-hidden"><output data-lab-output="rnn-hidden">1</output></label><div class="generic-result" data-lab-result>Новое состояние hₜ = tanh(0,5xₜ + 0,5hₜ₋₁).</div>',
+    'lstm-gates': '<label class="generic-control">Ворота забывания f<input type="range" min="0" max="100" value="80" data-lab-input="forget"><output data-lab-output="forget">0,80</output></label><label class="generic-control">Ворота записи i<input type="range" min="0" max="100" value="50" data-lab-input="input-gate"><output data-lab-output="input-gate">0,50</output></label><div class="generic-result" data-lab-result>Новое состояние памяти рассчитывается по двум воротам.</div>',
     'confusion-matrix': '<label class="generic-control">Порог классификации<input type="range" min="10" max="90" value="50" data-lab-input="threshold"><output data-lab-output="threshold">0.50</output></label><div class="generic-result" data-lab-result>Сравните ошибки первого и второго рода.</div>',
     'forward-pass': '<label class="generic-control">Входной сигнал<input type="range" min="0" max="100" value="50" data-lab-input="signal"><output data-lab-output="signal">0.50</output></label><div class="generic-result" data-lab-result>Наблюдайте, как сигнал проходит через слой.</div>',
     'backprop': '<label class="generic-control">Скорость обучения<input type="range" min="1" max="30" value="12" data-lab-input="rate"><output data-lab-output="rate">0.12</output></label><div class="generic-result" data-lab-result>Сделайте шаг назад по градиенту и сравните ошибку.</div>',
@@ -690,6 +707,37 @@ function updateGenericLab() {
     const missing = value('missing', 'median');
     const outlier = generic.querySelector('[data-lab-input="outlier"]')?.checked;
     result.textContent = `После очистки: ${missing === 'drop' ? 2 : 3} строки, 0 пропусков, ${outlier ? 0 : 1} выбросов`;
+  } else if (kind === 'kmeans-lab') {
+    const clusters = Number(value('clusters', 2));
+    const iteration = Number(value('iteration', 0));
+    generic.querySelector('[data-lab-output="clusters"]').textContent = String(clusters);
+    generic.querySelector('[data-lab-output="iteration"]').textContent = String(iteration);
+    const wcss = Math.max(1.8, 24 / (iteration + 1) + (clusters - 2) * 1.4);
+    result.textContent = `k=${clusters}, итерация ${iteration}: WCSS ${wcss.toFixed(1).replace('.', ',')}. Следующий шаг — переназначить точки ближайшему центроиду.`;
+  } else if (kind === 'pca-lab') {
+    const components = Number(value('components', 1));
+    generic.querySelector('[data-lab-output="components"]').textContent = String(components);
+    result.textContent = components === 1 ? '1 компонента сохраняет 90% дисперсии и уменьшает размерность до 1.' : '2 компоненты сохраняют 100% дисперсии и не сжимают пример.';
+  } else if (kind === 'gnn-message') {
+    const first = Number(value('neighbor-one', 2));
+    const second = Number(value('neighbor-two', 6));
+    generic.querySelector('[data-lab-output="neighbor-one"]').textContent = String(first);
+    generic.querySelector('[data-lab-output="neighbor-two"]').textContent = String(second);
+    result.textContent = `Среднее сообщение соседей: ${((first + second) / 2).toFixed(2).replace('.', ',')}. При self-признаке 4 и равных весах обновление равно ${((4 + (first + second) / 2) / 2).toFixed(2).replace('.', ',')}.`;
+  } else if (kind === 'rnn-state') {
+    const input = Number(value('rnn-input', 2));
+    const hidden = Number(value('rnn-hidden', 1));
+    generic.querySelector('[data-lab-output="rnn-input"]').textContent = String(input);
+    generic.querySelector('[data-lab-output="rnn-hidden"]').textContent = String(hidden);
+    const next = Math.tanh(0.5 * input + 0.5 * hidden);
+    result.textContent = `hₜ = tanh(0,5·${input} + 0,5·${hidden}) = ${next.toFixed(3).replace('.', ',')}.`;
+  } else if (kind === 'lstm-gates') {
+    const forget = Number(value('forget', 80)) / 100;
+    const inputGate = Number(value('input-gate', 50)) / 100;
+    generic.querySelector('[data-lab-output="forget"]').textContent = forget.toFixed(2).replace('.', ',');
+    generic.querySelector('[data-lab-output="input-gate"]').textContent = inputGate.toFixed(2).replace('.', ',');
+    const cell = forget * 2 + inputGate * 1;
+    result.textContent = `cₜ = ${forget.toFixed(2).replace('.', ',')}·2 + ${inputGate.toFixed(2).replace('.', ',')}·1 = ${cell.toFixed(2).replace('.', ',')}.`;
   } else if (kind === 'tree-depth') {
     const depth = Number(value('depth', 3));
     const output = generic.querySelector('[data-lab-output="depth"]');
@@ -966,26 +1014,38 @@ async function loadTaskForCurrentLesson() {
     const bank = await fetchJson('/api/questions');
     const normalized = normalizeLessonId(state.lessonId);
     const preferredId = state.lessonContent.get(normalized)?.mini_test;
-    const question = bank.find((item) => item.id === preferredId) || bank.find((item) => normalizeLessonId(item.lesson_id) === normalized) || bank[0];
-    state.taskQuestion = question;
+    const conceptual = bank.filter((item) => {
+      if (String(item.id).startsWith('exam-')) return false;
+      if (item.type !== 'single_choice') return false;
+      return !/(len\s*\(|2\s*[+*]\s*3|введите проценты|чему равна|какой расчёт нужно)/i.test(item.prompt || '');
+    });
+    const preferred = conceptual.find((item) => item.id === preferredId);
+    const sameLesson = conceptual.filter((item) => normalizeLessonId(item.lesson_id) === normalized);
+    const rest = conceptual.filter((item) => item !== preferred && !sameLesson.includes(item));
+    state.taskSession = {questions: [preferred, ...sameLesson.filter((item) => item !== preferred), ...rest].filter(Boolean).slice(0, 20), index: 0, answered: new Set()};
+    state.taskQuestion = state.taskSession.questions[0];
+    renderCurrentTaskQuestion();
+  } catch (error) {
+    $('#question-feedback').textContent = 'Не удалось загрузить вопросы. Откройте лекцию и повторите попытку.';
+  }
+}
+
+function renderCurrentTaskQuestion() {
+  const question = state.taskSession.questions[state.taskSession.index];
+  const list = $('#task-answer-list');
+  if (!question || !list) return;
+  state.taskQuestion = question;
     state.selectedAnswer = null;
     const options = question.options || [];
-    const normalizedQuestionId = normalizeLessonId(question.lesson_id || normalized);
-    $('#task-badge').textContent = question.lesson_id ? `УРОК ${normalizedQuestionId}` : 'ПРОВЕРКА';
-    $('#task-position').textContent = `Вопрос по уроку ${normalizedQuestionId}`;
-    $('#task-difficulty').textContent = question.difficulty || '● ● ○';
-    $('#task-question-title').textContent = question.prompt || 'Проверьте понимание темы.';
-    $('#task-question-context').textContent = question.solution || 'Выберите ответ, затем разберите причину результата.';
-    if (options.length) {
-      list.innerHTML = options.map((option, index) => `<button class="answer" data-answer="${escapeHtml(option)}"><span class="answer-key">${String.fromCharCode(65 + index)}</span><span>${escapeHtml(option)}</span></button>`).join('');
-    } else {
-      list.innerHTML = `<label class="generic-control" for="task-free-answer">Ответ</label><input id="task-free-answer" data-answer-input type="text" placeholder="Введите ответ" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;color:var(--text);background:var(--surface-2)">`;
-    }
-    $('#question-feedback').textContent = '';
-    $('#task-score').textContent = '0 / 0';
-  } catch (error) {
-    $('#question-feedback').textContent = 'Не удалось загрузить вопрос. Откройте лекцию и повторите попытку.';
-  }
+  const normalizedQuestionId = normalizeLessonId(question.lesson_id || state.lessonId);
+  $('#task-badge').textContent = question.lesson_id ? `УРОК ${normalizedQuestionId}` : 'ПРОВЕРКА';
+  $('#task-position').textContent = `Вопрос ${state.taskSession.index + 1} из ${state.taskSession.questions.length}`;
+  $('#task-difficulty').textContent = question.difficulty || '● ● ○';
+  $('#task-question-title').textContent = question.prompt || 'Проверьте понимание темы.';
+  $('#task-question-context').textContent = question.solution || 'Выберите ответ, затем разберите причину результата.';
+  list.innerHTML = options.map((option, index) => `<button class="answer" data-answer="${escapeHtml(option)}"><span class="answer-key">${String.fromCharCode(65 + index)}</span><span>${escapeHtml(option)}</span></button>`).join('');
+  $('#question-feedback').textContent = '';
+  $('#task-score').textContent = `${state.taskSession.answered.size} / ${state.taskSession.questions.length}`;
 }
 
 async function startExam(examId) {
@@ -1094,14 +1154,31 @@ function checkAnswer() {
   if (!selected) { feedback.className = 'question-feedback bad'; feedback.textContent = 'Введите или выберите ответ, затем нажмите «Проверить ответ».'; return; }
   $$('.answer').forEach((answer) => { answer.classList.remove('correct', 'wrong'); if (answer.dataset.answer === String(expected)) answer.classList.add('correct'); if (answer.dataset.answer === selected && String(expected) !== selected) answer.classList.add('wrong'); });
   const isCorrect = String(expected).trim().toLowerCase() === String(selected).trim().toLowerCase();
-  state.taskStats.answered += 1;
-  state.taskStats.correct += isCorrect ? 1 : 0;
+  const questionId = state.taskQuestion?.id || `task-${state.taskSession.index}`;
+  const firstAttempt = !state.taskSession.answered.has(questionId);
+  if (firstAttempt) {
+    state.taskSession.answered.add(questionId);
+    state.taskStats.answered += 1;
+    state.taskStats.correct += isCorrect ? 1 : 0;
+  }
   state.taskStats.lastWrong = !isCorrect;
   localStorage.setItem('ailab:task-stats', JSON.stringify(state.taskStats));
   renderTaskStats();
   renderAchievements();
-  if (isCorrect) { feedback.className = 'question-feedback good'; feedback.textContent = state.taskQuestion?.solution || 'Верно. Разберите, почему этот ответ следует из лекции.'; $('#task-score').textContent = '1 / 1'; showToast('Ответ принят · +10 XP', 'success'); }
-  else { feedback.className = 'question-feedback bad'; feedback.textContent = state.taskQuestion?.solution ? `Пока нет. Подсказка: ${state.taskQuestion.solution}` : 'Пока нет. Вернитесь к лекции и повторите пример.'; $('#task-score').textContent = '0 / 1'; }
+  if (isCorrect) { feedback.className = 'question-feedback good'; feedback.textContent = state.taskQuestion?.solution || 'Верно. Разберите, почему этот ответ следует из лекции.'; showToast('Ответ принят · +10 XP', 'success'); }
+  else { feedback.className = 'question-feedback bad'; feedback.textContent = state.taskQuestion?.solution ? `Пока нет. Подсказка: ${state.taskQuestion.solution}` : 'Пока нет. Вернитесь к лекции и повторите пример.'; }
+  $('#task-score').textContent = `${state.taskSession.answered.size} / ${state.taskSession.questions.length}`;
+  const next = $('[data-action="task-next"]');
+  if (next) { next.hidden = state.taskSession.index >= state.taskSession.questions.length - 1; next.textContent = state.taskSession.index === state.taskSession.questions.length - 1 ? 'Тест завершён' : 'Следующий вопрос →'; }
+}
+
+function nextTaskQuestion() {
+  if (state.taskSession.index >= state.taskSession.questions.length - 1) {
+    showToast('Тест завершён. Повторите вопросы с ошибками по подсказке.', 'success');
+    return;
+  }
+  state.taskSession.index += 1;
+  renderCurrentTaskQuestion();
 }
 
 async function submitTutor() {
@@ -1286,6 +1363,7 @@ function action(name, element = null) {
     'open-code-runner': () => { const lesson = currentLesson(); const code = state.lessonContent.get(lesson?.id)?.code_example || 'print(2 + 3)'; const title = escapeHtml(state.lessonContent.get(lesson?.id)?.title || lesson?.title || 'текущий урок'); openModal(`Песочница · ${title}`, '<p>Запустите пример текущего урока в изолированной среде с ограничением времени, вывода, памяти и запрещённых операций.</p><textarea id="code-editor" rows="8" class="modal-code" style="width:100%;resize:vertical">' + escapeHtml(code) + '</textarea><pre id="code-output" class="modal-code" aria-live="polite">Готово к запуску</pre>', '<button class="button button-primary" data-action="run-code">Запустить пример →</button>'); },
     'run-code': runCode,
     'check-answer': checkAnswer,
+    'task-next': nextTaskQuestion,
     'open-project': openProjectWorkspace,
     'start-project': openProjectWorkspace,
     'project-run-check': runProjectCheck,
