@@ -739,13 +739,6 @@ function stopLab() {
 
 function resetLab() { stopLab(); state.lab.step = 0; $('#lab-status').textContent = 'Готово к запуску'; drawLab(); }
 
-const demoAlumni = [
-  {id:'demo-1',display_name:'Мария Воронова',headline:'ML-аналитик · табличные данные',level:'младший практик',skills:['Python','классическое ML','метрики'],projects:['Предсказатель стоимости жилья'],city:'Казань'},
-  {id:'demo-2',display_name:'Илья Соколов',headline:'Инженер LLM-приложений',level:'младший практик',skills:['RAG','Transformer','оценка'],projects:['Помощник по учебным материалам'],city:'Москва'},
-  {id:'demo-3',display_name:'Надежда Белова',headline:'Исследователь компьютерного зрения',level:'младший практик',skills:['PyTorch','CNN','анализ ошибок'],projects:['Классификатор изображений'],city:'Новосибирск'},
-  {id:'demo-4',display_name:'Роман Ким',headline:'ML-инженер в обучении',level:'младший практик',skills:['GNN','временные ряды','Docker'],projects:['Безопасный ML-сервис'],city:'Санкт-Петербург'}
-];
-
 async function fetchJson(url, options = {}) {
   const token = localStorage.getItem('ailab:token');
   const headers = {'Content-Type':'application/json', ...(options.headers || {})};
@@ -759,10 +752,14 @@ async function fetchJson(url, options = {}) {
   return response.json();
 }
 
-function renderAlumni(items = demoAlumni) {
+function renderAlumni(items = []) {
   const grid = $('#alumni-grid');
   if (!grid) return;
   $('#alumni-count').textContent = items.length;
+  if (!items.length) {
+    grid.innerHTML = '<div class="panel empty-state">Публичных профилей пока нет. Они появятся после выпуска и согласия участника.</div>';
+    return;
+  }
   grid.innerHTML = items.map((item) => `<article class="alumni-card" data-alumni-id="${escapeHtml(item.id)}"><span class="alumni-avatar">${escapeHtml(item.display_name.split(' ').map((part) => part[0]).slice(0,2).join(''))}</span><div><h3>${escapeHtml(item.display_name)}</h3><p>${escapeHtml(item.headline || item.level || 'Выпускник AI Learning Lab')}${item.city ? ` · ${escapeHtml(item.city)}` : ''}</p><div class="term-related">${(item.skills || []).slice(0,3).map((skill) => `<span>${escapeHtml(skill)}</span>`).join('')}</div></div></article>`).join('');
   $$('.alumni-card', grid).forEach((card) => card.addEventListener('click', () => {
     const item = items.find((candidate) => candidate.id === card.dataset.alumniId);
@@ -777,9 +774,7 @@ async function loadAlumni(filter = '') {
     const payload = await fetchJson(`/api/alumni${normalized ? `?q=${encodeURIComponent(normalized)}` : ''}`);
     const rows = payload.items || payload;
     renderAlumni(rows.map((item) => ({...item, id: item.id || item.user_id, headline: item.bio || item.level, skills: item.skills || item.interests || [], projects: (item.projects || []).map((project) => typeof project === 'string' ? project : project.title)})));
-  } catch (error) {
-    renderAlumni(demoAlumni.filter((item) => `${item.display_name} ${item.headline} ${item.skills.join(' ')} ${item.projects.join(' ')}`.toLowerCase().includes(normalized)));
-  }
+  } catch (error) { renderAlumni([]); }
 }
 
 async function loadMentorDashboard() {
@@ -789,12 +784,15 @@ async function loadMentorDashboard() {
     const members = dashboards.flatMap((dashboard) => dashboard.members || []);
     $('#mentor-learners').textContent = members.length;
     $('#mentor-mastery').textContent = '—';
-    $('#mentor-gaps').textContent = members.reduce((total, member) => total + (member.gaps || []).length, 0);
+    const gapCount = members.reduce((total, member) => total + (member.gaps || []).length, 0);
+    $('#mentor-gaps').textContent = gapCount;
     $('#mentor-projects').textContent = members.reduce((total, member) => total + (member.projects_on_review || 0), 0);
     $('#mentor-cohorts').innerHTML = dashboards.map((dashboard) => `<div class="role-row"><span class="mastery-icon cyan">◌</span><div><strong>${escapeHtml(dashboard.cohort_name)}</strong><span>${dashboard.member_count || 0} участников · карта пробелов доступна</span></div></div>`).join('') || '<div class="empty-state">Группы пока не назначены.</div>';
+    $('#mentor-gaps-list').innerHTML = gapCount ? `<div class="role-row"><span class="mastery-icon amber">!</span><div><strong>Нужна повторная проработка</strong><span>${gapCount} тем требуют внимания по участникам группы</span></div><span class="badge">повторить</span></div>` : '<div class="empty-state">Пробелы по участникам не обнаружены.</div>';
   } catch (error) {
     $('#mentor-learners').textContent = '—'; $('#mentor-mastery').textContent = '—'; $('#mentor-gaps').textContent = '—'; $('#mentor-projects').textContent = '—';
     $('#mentor-cohorts').innerHTML = '<div class="empty-state">Нужна сессия с ролью mentor, instructor или admin для просмотра закрытых данных группы.</div>';
+    $('#mentor-gaps-list').innerHTML = '<div class="empty-state">Карта пробелов доступна после загрузки данных группы.</div>';
   }
 }
 
