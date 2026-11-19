@@ -7,8 +7,19 @@ from sqlalchemy import select
 from api.database import SessionLocal
 from api.main import app
 from api.models import Exam, User
+from scripts.seed_db import demo_exam_question_ids
 
 client = TestClient(app)
+
+
+def test_demo_exam_uses_conceptual_ai_questions():
+    question_map = {item["id"]: item for item in json.loads((__import__("pathlib").Path("data/questions.json")).read_text(encoding="utf-8"))}
+    ids = demo_exam_question_ids()
+    assert len(ids) == 50
+    assert ids == [f"exam-{index:03d}" for index in range(1, 51)]
+    assert all(question_map[item]["type"] not in {"code_output", "numeric"} for item in ids)
+    assert not any("len(" in question_map[item]["prompt"] or "2+3" in question_map[item]["prompt"] for item in ids)
+    assert all(question_map[item]["lesson_id"] for item in ids)
 
 
 def test_enrollment_exam_attempt_and_audit_flow():

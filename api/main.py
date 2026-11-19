@@ -190,7 +190,11 @@ def exam_question_ids(exam: Exam) -> list[str]:
     if ids:
         return [str(item) for item in ids]
     questions = read_json("questions.json")
-    return [str(item["id"]) for item in questions[:10]]
+    preferred = {f"exam-{index:03d}" for index in range(1, 51)}
+    selected = [str(item["id"]) for item in questions if str(item.get("id")) in preferred]
+    if selected:
+        return selected
+    return [str(item["id"]) for item in questions if item.get("type") not in {"code_output", "numeric"}][:10]
 
 
 def exam_public(exam: Exam) -> ExamPublic:

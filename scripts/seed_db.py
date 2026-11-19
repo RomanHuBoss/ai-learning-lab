@@ -20,20 +20,8 @@ def normalize_lesson_id(value: str) -> str:
 
 
 def demo_exam_question_ids() -> list[str]:
-    root = Path(__file__).resolve().parents[1]
-    program = json.loads((root / 'data' / 'full_program.json').read_text(encoding='utf-8'))
-    questions = json.loads((root / 'data' / 'questions.json').read_text(encoding='utf-8'))
-    lesson_ids = {normalize_lesson_id(item['id']) for item in program['lessons']}
-    selected: list[str] = []
-    seen_lessons: set[str] = set()
-    for item in questions:
-        lesson_id = normalize_lesson_id(item.get('lesson_id'))
-        if lesson_id in lesson_ids and lesson_id not in seen_lessons:
-            selected.append(item['id'])
-            seen_lessons.add(lesson_id)
-        if len(selected) == 10:
-            break
-    return selected
+    """Return the stable 50-question conceptual final exam."""
+    return [f"exam-{index:03d}" for index in range(1, 51)]
 
 
 def ensure_user(db, email: str, name: str, role: str, password: str) -> User:
