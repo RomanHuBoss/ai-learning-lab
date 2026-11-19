@@ -114,6 +114,11 @@ h1,h2,h3{font-family:Helvetica,Arial,Verdana,sans-serif}
 .generic-lab-header p,.generic-lab-footer,.generic-lab p,.generic-lab li{font-size:14px;line-height:1.6}
 .generic-control,.generic-result{font-size:14px}
 .lesson-inline-link{display:inline-block;margin-top:8px;font-size:14px}
+.lesson-code-runner{display:inline-block;margin-top:10px;font-size:13px}
+#view-lab .page-heading>div{width:100%}
+#view-lab .page-heading .page-lead{max-width:none}
+.lab-toolbar-actions{display:flex;align-items:center;gap:9px;flex-wrap:wrap;justify-content:flex-end}
+.lab-toolbar-actions .button{min-height:32px;padding:0 11px;font-size:11px}
 .nav-item{font-size:14px}
 .page-lead{font-size:15px}
 .button{font-size:14px}
