@@ -857,14 +857,14 @@ async function joinCohort() {
 async function runCode() {
   const code = $('#code-editor')?.value || '';
   const output = $('#code-output');
-  output.textContent = 'Запуск в изолированном worker…';
+  output.textContent = 'Запуск в изолированном исполнителе…';
   try {
     const response = await fetch('/api/code/run', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({code, timeout_seconds: 3})});
     const result = await response.json();
     output.textContent = `${result.status}\n${result.stdout || ''}${result.stderr || ''}${result.blocked_reason ? `\n${result.blocked_reason}` : ''}`;
     output.style.color = result.status === 'ok' ? 'var(--green)' : 'var(--amber)';
   } catch (error) {
-    output.textContent = 'Worker недоступен. Проверьте /api/sandbox/policy и состояние Docker.';
+    output.textContent = 'Исполнитель кода недоступен. Проверьте политику песочницы и состояние Docker.';
     output.style.color = 'var(--red)';
   }
 }
@@ -881,7 +881,7 @@ function openProjectWorkspace() {
   closeModal();
   setView('projects');
   workspace.hidden = false;
-  workspace.innerHTML = `<span class="panel-kicker">ПРОЕКТ · МОДУЛЬ 02</span><h2>Предсказатель стоимости жилья</h2><p>Соберите воспроизводимый ML-конвейер от постановки задачи до модельной карточки. Каждый шаг связан с уроком, лабораторией и acceptance-проверкой.</p><div class="project-workspace-grid"><div><h3>План работы</h3><ul class="project-step-list"><li><input type="checkbox" data-project-step="problem"><span><strong>1. Сформулировать задачу</strong><br>Целевая переменная, единица наблюдения и риск утечки.</span></li><li><input type="checkbox" data-project-step="data"><span><strong>2. Подготовить данные</strong><br>Разбиение train/validation/test до вычисления статистик.</span></li><li><input type="checkbox" data-project-step="models"><span><strong>3. Сравнить модели</strong><br>Baseline, дерево и ансамбль с одинаковым протоколом оценки.</span></li><li><input type="checkbox" data-project-step="errors"><span><strong>4. Разобрать ошибки</strong><br>Пять примеров, где модель ошиблась, и гипотеза улучшения.</span></li><li><input type="checkbox" data-project-step="card"><span><strong>5. Оформить модельную карточку</strong><br>Данные, метрики, ограничения, мониторинг и план отката.</span></li></ul></div><div class="project-acceptance"><h3>Acceptance criteria</h3><ul><li>Нет data leakage</li><li>MAE и RMSE на отложенной выборке</li><li>Сравнены минимум три модели</li><li>Описаны пять ошибок</li><li>README запускается одной командой</li></ul><div id="project-check-output" class="generic-result" style="margin-top:14px">Проверки ещё не запускались.</div></div></div><div class="project-workspace-actions"><button class="button button-primary" data-action="project-run-check">Запустить acceptance-проверки</button><button class="button button-ghost" data-action="project-open-sandbox">Открыть sandbox</button><button class="button button-ghost" data-action="project-save">Сохранить шаги</button></div>`;
+  workspace.innerHTML = `<span class="panel-kicker">ПРОЕКТ · МОДУЛЬ 02</span><h2>Предсказатель стоимости жилья</h2><p>Соберите воспроизводимый ML-конвейер от постановки задачи до модельной карточки. Каждый шаг связан с уроком, лабораторией и приёмочной проверкой.</p><div class="project-workspace-grid"><div><h3>План работы</h3><ul class="project-step-list"><li><input type="checkbox" data-project-step="problem"><span><strong>1. Сформулировать задачу</strong><br>Целевая переменная, единица наблюдения и риск утечки.</span></li><li><input type="checkbox" data-project-step="data"><span><strong>2. Подготовить данные</strong><br>Разбиение обучающей, проверочной и тестовой выборок до вычисления статистик.</span></li><li><input type="checkbox" data-project-step="models"><span><strong>3. Сравнить модели</strong><br>Базовая модель, дерево и ансамбль с одинаковым протоколом оценки.</span></li><li><input type="checkbox" data-project-step="errors"><span><strong>4. Разобрать ошибки</strong><br>Пять примеров, где модель ошиблась, и гипотеза улучшения.</span></li><li><input type="checkbox" data-project-step="card"><span><strong>5. Оформить модельную карточку</strong><br>Данные, метрики, ограничения, мониторинг и план отката.</span></li></ul></div><div class="project-acceptance"><h3>Критерии готовности</h3><ul><li>Нет утечки данных</li><li>MAE и RMSE на отложенной выборке</li><li>Сравнены минимум три модели</li><li>Описаны пять ошибок</li><li>Инструкция запускается одной командой</li></ul><div id="project-check-output" class="generic-result" style="margin-top:14px">Проверки ещё не запускались.</div></div></div><div class="project-workspace-actions"><button class="button button-primary" data-action="project-run-check">Запустить приёмочные проверки</button><button class="button button-ghost" data-action="project-open-sandbox">Открыть песочницу</button><button class="button button-ghost" data-action="project-save">Сохранить шаги</button></div>`;
   workspace.scrollIntoView({behavior: 'smooth', block: 'start'});
 }
 
@@ -892,11 +892,11 @@ async function runProjectCheck() {
   try {
     const response = await fetch('/api/code/run', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({code: 'print("project smoke: OK")', timeout_seconds: 3})});
     const result = await response.json();
-    output.textContent = result.status === 'ok' ? 'Smoke-проверка sandbox пройдена. Заполните пять шагов проекта и приложите результаты.' : 'Проверка sandbox завершилась с ошибкой.';
+    output.textContent = result.status === 'ok' ? 'Проверка песочницы пройдена. Заполните пять шагов проекта и приложите результаты.' : 'Проверка песочницы завершилась с ошибкой.';
     output.className = result.status === 'ok' ? 'generic-result' : 'generic-result bad';
   } catch (error) {
     output.className = 'generic-result bad';
-    output.textContent = 'Sandbox недоступен. Проверьте Docker worker.';
+    output.textContent = 'Песочница недоступна. Проверьте исполнитель Docker.';
   }
 }
 
@@ -927,7 +927,7 @@ function action(name, element = null) {
     'lab-step': stepLab,
     'lab-reset': resetLab,
     'open-lab-text': () => openModal('Текстовое описание графика', '<p>Фиолетовая линия показывает параболу L(w) = w². Голубые точки — последовательность весов модели. При каждом шаге вес смещается по направлению, противоположному градиенту. Зелёная точка — последний рассчитанный вес.</p><p>Измените скорость обучения и сравните, приближается ли траектория к нулю или перелетает через минимум.</p>'),
-    'open-code-runner': () => openModal('Безопасный Python-runner', '<p>Код отправляется в отдельный worker с ограничением времени, вывода, памяти и запрещёнными операциями. Сеть и доступ к секретам отключены на production-границе контейнера.</p><textarea id="code-editor" rows="8" class="modal-code" style="width:100%;resize:vertical">print(2 + 3)</textarea><pre id="code-output" class="modal-code" aria-live="polite">Готово к запуску</pre>', '<button class="button button-primary" data-action="run-code">Запустить в sandbox →</button>'),
+    'open-code-runner': () => openModal('Безопасная Python-песочница', '<p>Код отправляется в отдельный исполнитель с ограничением времени, вывода, памяти и запрещённых операций. Сеть и доступ к секретам отключены на границе production-контейнера.</p><textarea id="code-editor" rows="8" class="modal-code" style="width:100%;resize:vertical">print(2 + 3)</textarea><pre id="code-output" class="modal-code" aria-live="polite">Готово к запуску</pre>', '<button class="button button-primary" data-action="run-code">Запустить в песочнице →</button>'),
     'run-code': runCode,
     'check-answer': checkAnswer,
     'open-project': openProjectWorkspace,
