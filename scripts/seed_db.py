@@ -11,6 +11,29 @@ from api.auth import password_hasher
 from api.database import SessionLocal, init_db
 from api.models import Cohort, CohortMembership, Exam, Profile, ProfileVisibility, ProjectPublication, User
 import json
+import re
+
+
+def normalize_lesson_id(value: str) -> str:
+    value = str(value or '')
+    return re.sub(r'^0(?=\d\.)', '', value)
+
+
+def demo_exam_question_ids() -> list[str]:
+    root = Path(__file__).resolve().parents[1]
+    program = json.loads((root / 'data' / 'full_program.json').read_text(encoding='utf-8'))
+    questions = json.loads((root / 'data' / 'questions.json').read_text(encoding='utf-8'))
+    lesson_ids = {normalize_lesson_id(item['id']) for item in program['lessons']}
+    selected: list[str] = []
+    seen_lessons: set[str] = set()
+    for item in questions:
+        lesson_id = normalize_lesson_id(item.get('lesson_id'))
+        if lesson_id in lesson_ids and lesson_id not in seen_lessons:
+            selected.append(item['id'])
+            seen_lessons.add(lesson_id)
+        if len(selected) == 10:
+            break
+    return selected
 
 
 def ensure_user(db, email: str, name: str, role: str, password: str) -> User:
@@ -58,9 +81,12 @@ def main() -> None:
             exists = db.scalar(select(CohortMembership).where(CohortMembership.cohort_id == cohort.id, CohortMembership.user_id == user.id))
             if not exists:
                 db.add(CohortMembership(cohort_id=cohort.id, user_id=user.id, membership_role=role))
-        if not db.scalar(select(Exam).where(Exam.version == "demo-1.0")):
-            question_ids = [item["id"] for item in json.loads((Path(__file__).resolve().parents[1] / "data" / "questions.json").read_text(encoding="utf-8"))[:10]]
+        exam = db.scalar(select(Exam).where(Exam.version == "demo-1.0"))
+        question_ids = demo_exam_question_ids()
+        if not exam:
             db.add(Exam(title="Демо-экзамен AI Learning Lab", version="demo-1.0", question_ids=json.dumps(question_ids), pass_percent=75, is_published=True))
+        elif json.loads(exam.question_ids or "[]") != question_ids:
+            exam.question_ids = json.dumps(question_ids)
         db.commit()
     print("Seed complete. Demo accounts: demo@ai-learning.local / DemoPass123!, mentor@ai-learning.local / MentorPass123!, admin@ai-learning.local / AdminPass123!")
 
