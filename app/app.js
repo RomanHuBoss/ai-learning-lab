@@ -1,8 +1,8 @@
 const state = {
   view: localStorage.getItem('ailab:view') || 'dashboard',
   theme: localStorage.getItem('ailab:theme') || 'dark',
-  progress: Number(localStorage.getItem('ailab:progress') || 34),
-  lessonId: localStorage.getItem('ailab:lesson') || '1.04',
+  progress: Number(localStorage.getItem('ailab:progress') || 0),
+  lessonId: localStorage.getItem('ailab:lesson') || '1.01',
   lessons: [],
   lessonContent: new Map(),
   currentUser: null,
@@ -48,6 +48,73 @@ function renderProgress() {
   }
   if (percent) percent.textContent = String(progress);
   if (count) count.textContent = `${Math.round(progress * 36 / 100)} из 36`;
+  renderPathState();
+}
+
+function renderPathState() {
+  const completed = Math.round(Math.max(0, Math.min(100, state.progress)) * 36 / 100);
+  const pathProgress = $('#path-progress');
+  const pathModule = $('#path-module');
+  if (pathProgress) pathProgress.textContent = `${completed} / 36`;
+  if (pathModule) pathModule.textContent = String(Math.min(9, Math.floor(completed / 4) + 1)).padStart(2, '0');
+  const graphNodes = $$('.graph-node[data-lesson-id]');
+  if (!graphNodes.length) return;
+  const activeLessonIndex = Math.max(0, state.lessons.findIndex((lesson) => lesson.id === state.lessonId));
+  graphNodes.forEach((node) => {
+    const lessonIndex = state.lessons.findIndex((lesson) => lesson.id === normalizeLessonId(node.dataset.lessonId));
+    const completedNode = Boolean(state.currentUser) && lessonIndex >= 0 && lessonIndex < completed;
+    const currentNode = lessonIndex === activeLessonIndex;
+    node.classList.toggle('complete', completedNode);
+    node.classList.toggle('current', currentNode);
+    node.classList.toggle('locked', !completedNode && !currentNode);
+    const status = node.querySelector('small');
+    if (status) status.textContent = completedNode ? 'освоено' : currentNode ? 'сейчас' : 'доступно после проверки';
+  });
+}
+
+function applyRoleVisibility() {
+  const role = state.currentUser?.role || '';
+  $$('[data-roles]').forEach((element) => {
+    const roles = element.dataset.roles.split(',').map((item) => item.trim());
+    element.hidden = !role || !roles.includes(role);
+  });
+  $$('[data-authenticated-only]').forEach((element) => { element.hidden = !state.currentUser; });
+  $$('[data-progress-only]').forEach((element) => { element.hidden = !state.currentUser || state.progress <= 0; });
+  $$('[data-guest-only]').forEach((element) => { element.hidden = Boolean(state.currentUser); });
+}
+
+function renderDashboardDate() {
+  const target = $('#dashboard-date');
+  if (!target) return;
+  target.textContent = new Intl.DateTimeFormat('ru-RU', {weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'}).format(new Date()).toUpperCase();
+}
+
+function applyUserState(user) {
+  state.currentUser = user || null;
+  const name = user?.display_name || 'участник';
+  const initials = user ? name.split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase() : 'AI';
+  $('#workspace-name').textContent = user?.display_name || 'Демо-профиль';
+  $('#workspace-avatar').textContent = initials;
+  $('#top-avatar').textContent = initials;
+  $('#dashboard-name').textContent = user ? name.split(/\s+/)[0] : 'участник';
+  $('#workspace-track').textContent = user ? `Роль · ${user.role}` : 'Локальная траектория';
+  applyRoleVisibility();
+  renderDashboardLesson();
+}
+
+function renderDashboardLesson() {
+  const lesson = currentLesson();
+  if (!lesson) return;
+  const content = state.lessonContent.get(lesson.id) || {};
+  const title = content.title || lesson.title || 'Первый урок';
+  const number = String(lesson.id || '1.01').split('.')[1] || '01';
+  const moduleNumber = String(lesson.id || '1.01').split('.')[0] || '1';
+  $('#dashboard-lesson-status').textContent = `УРОК ${lesson.id}`;
+  $('#dashboard-lesson-number').textContent = number.padStart(2, '0');
+  $('#dashboard-lesson-module').textContent = `МОДУЛЬ ${moduleNumber.padStart(2, '0')} · ${lesson.stage || 'ОСНОВЫ'}`;
+  $('#dashboard-lesson-title').textContent = title;
+  $('#dashboard-lesson-description').textContent = content.why_it_matters || lesson.description || 'Начните с первого урока курса и двигайтесь по prerequisite-графу.';
+  $('#dashboard-lesson-meta').textContent = `◷ ${content.duration_minutes || lesson.duration_minutes || 35} мин · ◌ Лекция и практика`;
 }
 
 function showToast(message, type = 'info') {
@@ -66,6 +133,8 @@ function applyTheme() {
 }
 
 function setView(view) {
+  if (view === 'mentor' && !['mentor', 'instructor', 'admin'].includes(state.currentUser?.role)) view = 'dashboard';
+  if (view === 'admin' && state.currentUser?.role !== 'admin') view = 'dashboard';
   const target = $(`#view-${view}`);
   if (!target) return;
   state.view = view;
@@ -74,6 +143,7 @@ function setView(view) {
   const nav = $(`.nav-item[data-view="${view}"]`);
   $('#breadcrumb-current').textContent = nav ? nav.textContent.trim() : view;
   persist();
+  if (view === 'dashboard') renderDashboardLesson();
   if (view === 'lab') requestAnimationFrame(drawLab);
   if (view === 'alumni') loadAlumni($('#alumni-search')?.value || '');
   if (view === 'mentor') loadMentorDashboard();
@@ -94,7 +164,7 @@ const fallbackLessons = [
 ];
 
 function currentLesson() {
-  return state.lessons.find((lesson) => lesson.id === state.lessonId) || state.lessons[0] || fallbackLessons[3];
+  return state.lessons.find((lesson) => lesson.id === state.lessonId) || state.lessons[0] || fallbackLessons[0];
 }
 
 function normalizeLessonId(value) {
@@ -121,8 +191,16 @@ function renderLesson() {
   nextButton.disabled = !next;
   previousButton.setAttribute('aria-disabled', String(!previous));
   nextButton.setAttribute('aria-disabled', String(!next));
-  $('#lesson-content').innerHTML = `<div class="lesson-content-header"><div><span class="panel-kicker">УЧЕБНЫЙ МАТЕРИАЛ · ${escapeHtml(lesson.id)}</span><h2>${escapeHtml(title)}</h2></div><span class="lesson-duration">${content.duration_minutes || lesson.duration_minutes || '—'} мин</span></div><div class="lesson-content-grid"><div><h3>Цели урока</h3><ul>${(content.learning_objectives || lesson.objectives || ['Понять основную идею темы', 'Применить её в практике']).map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul><h3>Интуиция</h3><p>${escapeHtml(content.intuition || 'Сначала сформулируйте идею своими словами, затем проверьте её на маленьком примере.')}</p></div><div><h3>Почему это важно</h3><p>${escapeHtml(content.why_it_matters || 'Эта тема связывает фундаментальные понятия с рабочими ML/AI-сценариями.')}</p><h3>Короткое резюме</h3><p>${escapeHtml((content.summary || ['Разберите пример', 'Проверьте себя', 'Сделайте практическое упражнение']).join(' · '))}</p></div></div>${content.code_example ? `<details class="lesson-code"><summary>Пример кода</summary><pre><code>${escapeHtml(content.code_example)}</code></pre></details>` : ''}`;
+  const list = (items, fallback) => (items?.length ? items : fallback).map((item) => `<li>${escapeHtml(item)}</li>`).join('');
+  const known = content.what_is_known || [];
+  const objectives = content.learning_objectives || lesson.objectives || ['Понять основную идею темы', 'Применить её в практике'];
+  const misconceptions = content.misconceptions || [];
+  const summary = content.summary || ['Разберите пример', 'Проверьте себя', 'Сделайте практическое упражнение'];
+  const visualization = content.visualization?.fallback || 'Схема и маленький численный пример помогают связать формулу с наблюдаемым поведением.';
+  const remediation = content.remediation?.if_wrong || 'Вернитесь к prerequisite и повторите ручной пример.';
+  $('#lesson-content').innerHTML = `<div class="lesson-content-header"><div><span class="panel-kicker">ЛЕКЦИЯ · УРОК ${escapeHtml(lesson.id)}</span><h2>${escapeHtml(title)}</h2></div><span class="lesson-duration">${content.duration_minutes || lesson.duration_minutes || '—'} мин</span></div><div class="lesson-content-actions"><button class="button button-primary" data-action="lesson-lab">Открыть лабораторию ↓</button><button class="button button-ghost" data-action="lesson-tasks">Перейти к проверке →</button></div><div class="lesson-lecture-grid"><div><h3>Что уже известно</h3><ul>${list(known, ['Базовые понятия предыдущих уроков'])}</ul><h3>Цели урока</h3><ul>${list(objectives, ['Понять основную идею темы', 'Применить её в практике'])}</ul><h3>Интуиция</h3><p>${escapeHtml(content.intuition || 'Сначала сформулируйте идею своими словами, затем проверьте её на маленьком примере.')}</p><h3>Визуализация</h3><p>${escapeHtml(visualization)}</p><h3>Формальное объяснение</h3><p>${escapeHtml(content.formal_explanation || 'Свяжите обозначения, входы, выходы и ограничение метода.')}</p></div><div><h3>Почему это важно</h3><p>${escapeHtml(content.why_it_matters || 'Эта тема связывает фундаментальные понятия с рабочими ML/AI-сценариями.')}</p><h3>Ручной пример</h3><p>${escapeHtml(content.manual_example || 'Решите небольшой пример вручную и проверьте численный результат.')}</p><h3>Типичные заблуждения</h3><ul>${list(misconceptions, ['Не подменяйте интуицию формальным условием.', 'Проверяйте результат на новых данных.'])}</ul><h3>Мини-тест</h3><p>Идентификатор проверки <strong>${escapeHtml(content.mini_test || lesson.assessment || 'после лекции')}</strong>. После ответа разберите причину ошибки.</p><h3>Если ответ неверен</h3><p>${escapeHtml(remediation)}</p><h3>Короткое резюме</h3><ul>${list(summary, ['Повторите ключевую идею', 'Сделайте практическое упражнение'])}</ul></div></div>${content.code_example ? `<details class="lesson-code"><summary>Пример кода</summary><pre><code>${escapeHtml(content.code_example)}</code></pre></details>` : ''}<div class="lesson-content-footer"><span>Лаборатория <strong>${escapeHtml(content.interactive_lab || lesson.lab || 'практика')}</strong></span><span>Упражнение <strong>${escapeHtml(content.independent_exercise || lesson.exercise_id || 'практика')}</strong></span><button class="text-button" data-action="lesson-exam">Открыть экзамен →</button></div>`;
   persist();
+  renderPathState();
 }
 
 function openLesson(lessonId) {
@@ -165,19 +243,21 @@ async function loadLessons() {
 
 async function loadCurrentUser() {
   const token = localStorage.getItem('ailab:token');
-  if (!token) return;
+  if (!token) { applyUserState(null); return; }
   try {
-    state.currentUser = await fetchJson('/api/auth/me');
-    const user = state.currentUser;
-    const name = user.display_name || user.email.split('@')[0];
-    const initials = name.split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase();
-    $('#workspace-name').textContent = name;
-    $('#workspace-avatar').textContent = initials;
-    $('#top-avatar').textContent = initials;
-    $('#dashboard-name').textContent = name.split(/\s+/)[0];
-    $('#workspace-track').textContent = `Роль · ${user.role}`;
+    const user = await fetchJson('/api/auth/me');
+    applyUserState(user);
+    const profile = await fetchJson('/api/profile/me').catch(() => null);
+    if (profile) {
+      state.progress = Number(profile.completion_percent || 0);
+      renderProgress();
+      applyRoleVisibility();
+      if (profile.completed_lessons?.length) state.lessonId = normalizeLessonId(profile.completed_lessons.at(-1));
+    }
+    renderDashboardLesson();
   } catch (error) {
     localStorage.removeItem('ailab:token');
+    applyUserState(null);
   }
 }
 
@@ -276,6 +356,10 @@ async function fetchJson(url, options = {}) {
   const headers = {'Content-Type':'application/json', ...(options.headers || {})};
   if (token) headers.Authorization = `Bearer ${token}`;
   const response = await fetch(url, {...options, headers});
+  if (response.status === 401) {
+    localStorage.removeItem('ailab:token');
+    applyUserState(null);
+  }
   if (!response.ok) throw new Error((await response.json().catch(() => ({}))).detail || `HTTP ${response.status}`);
   return response.json();
 }
@@ -456,13 +540,25 @@ async function authRequest(mode) {
     const result = await response.json();
     if (!response.ok) throw new Error(result.detail || 'Не удалось выполнить вход');
     localStorage.setItem('ailab:token', result.access_token);
-    state.currentUser = result.user;
-    loadCurrentUser();
+    applyUserState(result.user);
+    await loadCurrentUser();
     output.className = 'question-feedback good'; output.textContent = `Вход выполнен. Роль: ${result.user.role}. Прогресс можно сохранять в PostgreSQL.`;
     showToast('Сессия сохранена', 'success');
   } catch (error) {
     output.className = 'question-feedback bad'; output.textContent = error.message;
   }
+}
+
+function logout() {
+  localStorage.removeItem('ailab:token');
+  state.progress = 0;
+  state.lessonId = '1.01';
+  applyUserState(null);
+  renderProgress();
+  renderLesson();
+  closeModal();
+  setView('dashboard');
+  showToast('Вы вышли из аккаунта', 'success');
 }
 
 async function loadMyProfile() {
@@ -524,6 +620,9 @@ function action(name, element = null) {
   const actions = {
     'toggle-theme': () => { state.theme = state.theme === 'dark' ? 'light' : 'dark'; applyTheme(); drawLab(); showToast(state.theme === 'dark' ? 'Тёмная тема включена' : 'Светлая тема включена'); },
     'continue-learning': () => openLesson(state.lessonId),
+    'lesson-lab': () => { setView('lab'); requestAnimationFrame(() => $('#gradient-canvas')?.scrollIntoView({behavior: 'smooth', block: 'center'})); },
+    'lesson-tasks': () => setView('tasks'),
+    'lesson-exam': () => setView('exam'),
     'lesson-prev': () => moveLesson(-1),
     'lesson-next': () => moveLesson(1),
     'open-diagnostic': () => openModal('Входная диагностика', '<p>Демо-диагностика состоит из 36 адаптивных вопросов. Ответы помогут выбрать темп и открыть первый prerequisite-узел.</p><div class="modal-code">01 · арифметика и функции<br>02 · Python и алгоритмы<br>03 · вероятность и статистика<br>04 · интуиция машинного обучения</div>', '<button class="button button-ghost" data-action="close-modal">Позже</button><button class="button button-primary" data-action="start-diagnostic">Начать диагностику →</button>'),
@@ -545,9 +644,10 @@ function action(name, element = null) {
     'tutor': () => openModal('AI-тьютор · режим наводящих вопросов', '<p>Тьютор сначала просит вашу попытку, затем даёт подсказку и цитирует материалы курса. Готовое решение не раскрывается до попытки.</p><label class="range-label" for="tutor-question">Вопрос</label><textarea id="tutor-question" rows="3" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;color:var(--text);background:var(--surface-2)" placeholder="Например, почему градиент меняет знак?"></textarea><label class="range-label" for="tutor-attempt">Ваша попытка</label><textarea id="tutor-attempt" rows="3" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;color:var(--text);background:var(--surface-2)" placeholder="Что вы уже проверили?"></textarea><div id="tutor-output" class="question-feedback" role="status"></div>', '<button class="button button-ghost" data-action="go-lab">Открыть лабораторию</button><button class="button button-primary" data-action="tutor-submit">Спросить тьютора →</button>'),
     'tutor-submit': submitTutor,
     'show-all-activity': () => openModal('История активности', '<p>Сегодня · 18:42 · урок «Среднее и медиана» · +24 XP</p><p>Сегодня · 17:15 · лаборатория «Линейная регрессия» · 86%</p><p>Вчера · 21:03 · достижение «Первый график» · +50 XP</p>'),
-    'open-profile': () => openModal('Профиль и сессия', '<p><strong>Ваш профиль</strong><br>Локальная траектория обучения</p><p>Демо-сессия сохраняется в браузере. Для серверного прогресса войдите в аккаунт.</p><label class="range-label" for="auth-name">Имя</label><input id="auth-name" type="text" value="Участник AI Learning Lab" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;color:var(--text);background:var(--surface-2)"><label class="range-label" for="auth-email">Электронная почта</label><input id="auth-email" type="email" placeholder="you@example.com" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;color:var(--text);background:var(--surface-2)"><label class="range-label" for="auth-password">Пароль</label><input id="auth-password" type="password" placeholder="не менее 10 символов" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;color:var(--text);background:var(--surface-2)"><div id="auth-output" class="question-feedback" role="status"></div><div class="modal-code">Демо-аккаунты после seed: demo@ai-learning.local, mentor@ai-learning.local, admin@ai-learning.local</div><label class="range-label" for="profile-bio">О себе</label><textarea id="profile-bio" rows="2" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;color:var(--text);background:var(--surface-2)"></textarea><label class="range-label" for="profile-status">Статус</label><select id="profile-status" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;color:var(--text);background:var(--surface-2)"><option value="learning">обучается</option><option value="completed">курс завершён</option><option value="graduate">выпускник</option></select><label class="range-label" for="profile-completion">Завершение курса, %</label><input id="profile-completion" type="number" min="0" max="100" value="0" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;color:var(--text);background:var(--surface-2)"><label class="switch-row"><span><strong>Согласие на каталог выпускников</strong><small>Публикация доступна после экзамена и обязательных проектов</small></span><input id="profile-publish" type="checkbox"><i class="switch"></i></label><div id="profile-output" class="question-feedback" role="status"></div><label class="range-label" for="cohort-code">Код группы</label><input id="cohort-code" type="text" placeholder="AI-DEMO" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;color:var(--text);background:var(--surface-2)"><div id="cohort-output" class="question-feedback" role="status"></div>', '<button class="button button-ghost" data-action="auth-login">Войти</button><button class="button button-primary" data-action="auth-register">Зарегистрироваться</button><button class="button button-ghost" data-action="profile-load">Загрузить профиль</button><button class="button button-primary" data-action="profile-save">Сохранить профиль</button><button class="button button-ghost" data-action="join-cohort">Вступить в группу</button>'),
+    'open-profile': () => { openModal('Профиль и сессия', '<p><strong>Ваш профиль</strong><br>Локальная траектория обучения</p><p>Для сохранения прогресса и доступа к ролевым панелям войдите или зарегистрируйтесь.</p><label class="range-label" for="auth-name">Имя</label><input id="auth-name" type="text" value="Участник AI Learning Lab" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;color:var(--text);background:var(--surface-2)"><label class="range-label" for="auth-email">Электронная почта</label><input id="auth-email" type="email" placeholder="you@example.com" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;color:var(--text);background:var(--surface-2)"><label class="range-label" for="auth-password">Пароль</label><input id="auth-password" type="password" placeholder="не менее 10 символов" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;color:var(--text);background:var(--surface-2)"><div id="auth-output" class="question-feedback" role="status"></div><div class="modal-code">Пароль должен содержать минимум 10 символов.</div><label class="range-label" for="profile-bio">О себе</label><textarea id="profile-bio" rows="2" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;color:var(--text);background:var(--surface-2)"></textarea><label class="range-label" for="profile-status">Статус</label><select id="profile-status" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;color:var(--text);background:var(--surface-2)"><option value="learning">обучается</option><option value="completed">курс завершён</option><option value="graduate">выпускник</option></select><label class="range-label" for="profile-completion">Завершение курса, %</label><input id="profile-completion" type="number" min="0" max="100" value="0" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;color:var(--text);background:var(--surface-2)"><label class="switch-row"><span><strong>Согласие на каталог выпускников</strong><small>Публикация доступна после экзамена и обязательных проектов</small></span><input id="profile-publish" type="checkbox"><i class="switch"></i></label><div id="profile-output" class="question-feedback" role="status"></div><label class="range-label" for="cohort-code">Код группы</label><input id="cohort-code" type="text" placeholder="AI-DEMO" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;color:var(--text);background:var(--surface-2)"><div id="cohort-output" class="question-feedback" role="status"></div>', '<button class="button button-ghost" data-action="auth-login">Войти</button><button class="button button-primary" data-action="auth-register">Зарегистрироваться</button><button class="button button-ghost" data-action="profile-load">Загрузить профиль</button><button class="button button-primary" data-action="profile-save">Сохранить профиль</button><button class="button button-ghost" data-action="join-cohort">Вступить в группу</button><button class="button button-danger" data-action="auth-logout">Выйти</button>'); $('#modal-content [data-action="auth-logout"]').hidden = !state.currentUser; },
     'auth-login': () => authRequest('login'),
     'auth-register': () => authRequest('register'),
+    'auth-logout': logout,
     'profile-load': loadMyProfile,
     'profile-save': saveMyProfile,
     'join-cohort': joinCohort,
@@ -593,9 +693,16 @@ $$('[data-theme-choice]').forEach((button) => button.addEventListener('click', (
 $('#reduce-motion').addEventListener('change', (event) => document.documentElement.classList.toggle('reduced-motion', event.target.checked));
 window.addEventListener('resize', () => { if (state.view === 'lab') drawLab(); });
 document.addEventListener('keydown', (event) => { if (event.key === 'Escape') closeModal(); });
+document.addEventListener('keydown', (event) => {
+  if (!['Enter', ' '].includes(event.key)) return;
+  const actionButton = event.target.closest('[data-action]');
+  if (!actionButton || event.target.matches('button, input, select, textarea')) return;
+  event.preventDefault();
+  action(actionButton.dataset.action, actionButton);
+});
 
 $$('[data-tooltip]').forEach((element) => {
   if (!element.getAttribute('aria-label')) element.setAttribute('aria-label', `Подсказка. ${element.dataset.tooltip}`);
   element.title = element.dataset.tooltip;
 });
-applyTheme(); renderProgress(); setView(state.view); renderTerms(); loadTerms(); loadLessons(); loadCurrentUser(); drawLab();
+applyTheme(); renderDashboardDate(); renderProgress(); setView(state.view); renderTerms(); loadTerms(); loadLessons(); loadCurrentUser(); drawLab();

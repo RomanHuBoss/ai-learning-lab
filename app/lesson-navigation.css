@@ -3,6 +3,17 @@
 .lesson-navigation-current strong{max-width:460px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
 .lesson-navigation-current span:last-child{color:var(--text-muted);font-size:10px}
 .lesson-navigation button:disabled{cursor:not-allowed;opacity:.45;transform:none}
+.graph-node[role=button]{cursor:pointer}
+.graph-node[role=button]:focus-visible{outline:3px solid var(--cyan-strong);outline-offset:3px}
+.lesson-content-actions{display:flex;gap:9px;flex-wrap:wrap;margin:16px 0 22px}
+.lesson-lecture-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px}
+.lesson-lecture-grid h3{margin:18px 0 7px;font-size:14px}
+.lesson-lecture-grid h3:first-child{margin-top:0}
+.lesson-lecture-grid p,.lesson-lecture-grid li{color:var(--text-soft);font-size:11px}
+.lesson-lecture-grid ul{margin:7px 0 0;padding-left:20px}
+.lesson-content-footer{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:20px;padding-top:14px;border-top:1px solid var(--line);color:var(--text-muted);font-size:10px}
+.lesson-content-footer .text-button{margin-left:auto}
+@media(max-width:760px){.lesson-lecture-grid{grid-template-columns:1fr}.lesson-content-footer .text-button{margin-left:0}}
 .lesson-content{margin-bottom:13px}
 .lesson-content-header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:15px}
 .lesson-content-header h2{margin:3px 0 0;font-size:20px}
