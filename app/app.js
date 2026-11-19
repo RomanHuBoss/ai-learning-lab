@@ -61,7 +61,16 @@ function renderProgress() {
   }
   if (percent) percent.textContent = String(progress);
   if (count) count.textContent = `${Math.round(progress * 36 / 100)} из 36`;
+  renderNotificationState();
   renderPathState();
+}
+
+function renderNotificationState() {
+  const button = $('.notification-button');
+  const indicator = $('#notification-indicator');
+  const hasReminder = state.progress > 0;
+  if (indicator) indicator.hidden = !hasReminder;
+  if (button) button.setAttribute('aria-label', hasReminder ? 'Уведомления, есть напоминание' : 'Уведомления, новых нет');
 }
 
 function renderPathState() {
@@ -1040,7 +1049,7 @@ function saveProjectSteps() {
 function action(name, element = null) {
   const actions = {
     'toggle-theme': () => { state.theme = state.theme === 'dark' ? 'light' : 'dark'; applyTheme(); drawLab(); showToast(state.theme === 'dark' ? 'Тёмная тема включена' : 'Светлая тема включена'); },
-    'continue-learning': () => openLesson(state.lessonId),
+    'continue-learning': () => { closeModal(); openLesson(state.lessonId); },
     'lesson-lab': () => { setView('lab'); requestAnimationFrame(() => { const target = $('#lab-generic')?.hidden ? $('#gradient-canvas') : $('#lab-generic'); target?.scrollIntoView({behavior: 'smooth', block: 'center'}); }); },
     'generic-lab-run': () => { updateGenericLab(); showToast('Опыт пересчитан', 'success'); },
     'visualization-tab': () => {
@@ -1090,7 +1099,15 @@ function action(name, element = null) {
     'submit-exam': submitExam,
     'mentor-export': async () => { try { const cohorts = await fetchJson('/api/cohorts'); if (cohorts[0]) await downloadCsv(`/api/mentor/cohorts/${cohorts[0].id}/export.csv`, `cohort-${cohorts[0].id}.csv`); else showToast('Нет доступной группы для экспорта', 'info'); } catch (error) { showToast('Экспорт наставника недоступен', 'info'); } },
     'admin-export': () => downloadCsv('/api/admin/export/alumni.csv', 'alumni.csv'),
-    'notifications': () => openModal('Уведомления', '<p>Сегодня в 21:00 — повторение темы «Функции потерь».</p><p>До контрольной модуля 01 осталось 5 дней.</p>'),
+    'notifications': () => {
+      if (state.progress <= 0) {
+        openModal('Уведомления', '<p>Новых уведомлений нет.</p><p>После первого ответа в мини-тесте или запуска лаборатории здесь появится связанное с вашим прогрессом напоминание.</p>', '<button class="button button-primary" data-action="continue-learning">Начать первый урок →</button>');
+        return;
+      }
+      const lesson = currentLesson();
+      const title = escapeHtml(state.lessonContent.get(lesson?.id)?.title || lesson?.title || 'текущий урок');
+      openModal('Уведомления', `<p>Продолжите обучение с урока «${title}».</p><p>Это напоминание построено по сохранённой точке вашего прогресса.</p>`, '<button class="button button-primary" data-action="continue-learning">Открыть урок →</button>');
+    },
     'search': () => openModal('Поиск по кампусу', '<p>Ищите уроки, термины, проекты и лаборатории. Введите запрос в словаре или откройте карту курса.</p>', '<button class="button button-primary" data-action="go-dictionary">Открыть словарь →</button>'),
     'go-dictionary': () => { closeModal(); setView('dictionary'); $('#term-search').focus(); },
     'open-lesson': () => { closeModal(); openLesson(element?.dataset.lessonId || state.lessonId); },
