@@ -1,9 +1,19 @@
+import json
+import re
+from pathlib import Path
+
 from fastapi.testclient import TestClient
 
 from api.main import app
 
 
 client = TestClient(app)
+
+
+def test_training_bank_has_twenty_conceptual_questions():
+    questions = json.loads(Path("data/questions.json").read_text(encoding="utf-8"))
+    conceptual = [item for item in questions if item.get("type") == "single_choice" and not re.search(r"len\s*\(|2\s*[+*]\s*3|введите проценты|чему равна|какой расчёт нужно", item.get("prompt", ""), re.IGNORECASE)]
+    assert len(conceptual) >= 20
 
 
 def test_sandbox_runs_short_code():

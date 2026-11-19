@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
@@ -13,7 +14,7 @@ client = TestClient(app)
 
 
 def test_demo_exam_uses_conceptual_ai_questions():
-    question_map = {item["id"]: item for item in json.loads((__import__("pathlib").Path("data/questions.json")).read_text(encoding="utf-8"))}
+    question_map = {item["id"]: item for item in json.loads(Path("data/questions.json").read_text(encoding="utf-8"))}
     ids = demo_exam_question_ids()
     assert len(ids) == 50
     assert ids == [f"exam-{index:03d}" for index in range(1, 51)]
