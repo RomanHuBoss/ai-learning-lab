@@ -231,6 +231,11 @@ function renderLessonVisualization(content) {
   const visualization = content.visualization || {};
   const fallback = visualization.fallback || 'Схема и маленький численный пример помогают связать формулу с наблюдаемым поведением.';
   const alt = visualization.alt || 'Иллюстрация к теме урока';
+  const wrapVisuals = (tableMarkup, graphMarkup) => {
+    if (!tableMarkup) return graphMarkup;
+    if (!graphMarkup) return tableMarkup;
+    return `<div class="lesson-visualization"><div class="visualization-tabs" role="tablist" aria-label="Представление иллюстрации"><button class="visualization-tab active" role="tab" aria-selected="true" data-action="visualization-tab" data-visualization="table">Таблица</button><button class="visualization-tab" role="tab" aria-selected="false" data-action="visualization-tab" data-visualization="graph">График</button></div><div class="visualization-pane active" data-visualization-pane="table">${tableMarkup}</div><div class="visualization-pane" data-visualization-pane="graph" hidden>${graphMarkup}</div></div>`;
+  };
   if (visualization.svg) return `<figure class="lesson-visual lesson-visual-svg" role="img" aria-label="${escapeHtml(alt)}">${visualization.svg}<figcaption>${escapeHtml(alt)}</figcaption></figure>`;
   const table = visualization.table || content.table;
   let tableMarkup = '';
@@ -253,10 +258,10 @@ function renderLessonVisualization(content) {
       const [x, y] = positions[index];
       return graph.type === 'flow' ? `<rect x="${x - 35}" y="${y - 18}" width="70" height="36" rx="8" fill="rgba(125,211,252,.12)" stroke="var(--cyan)"/><text x="${x}" y="${y + 5}" text-anchor="middle" fill="currentColor">${escapeHtml(node)}</text>` : `<circle cx="${x}" cy="${y}" r="24" fill="rgba(125,211,252,.12)" stroke="var(--cyan)"/><text x="${x}" y="${y + 5}" text-anchor="middle" fill="currentColor">${escapeHtml(node)}</text>`;
     }).join('');
-    return `${tableMarkup}<figure class="lesson-visual lesson-visual-chart"><svg viewBox="0 0 380 170" role="img" aria-label="${escapeHtml(alt)}">${lines}${shapes}</svg><figcaption>${escapeHtml(alt)}</figcaption></figure>`;
+    return wrapVisuals(tableMarkup, `<figure class="lesson-visual lesson-visual-chart"><svg viewBox="0 0 380 170" role="img" aria-label="${escapeHtml(alt)}">${lines}${shapes}</svg><figcaption>${escapeHtml(alt)}</figcaption></figure>`);
   }
   const graphSeries = graph?.series || [];
-  const points = visualization.points || (graphSeries.length ? graphSeries[0].values.map((value, index) => ({x: index + 1, y: Array.isArray(value) ? value[1] : value})) : null);
+  const points = visualization.points || (graphSeries.length ? graphSeries[0].values.map((value, index) => ({x: Array.isArray(value) ? value[0] : index + 1, y: Array.isArray(value) ? value[1] : value})) : null);
   if (Array.isArray(points) && points.length > 1) {
     const values = points.map((point) => ({x: Number(point.x), y: Number(point.y)})).filter((point) => Number.isFinite(point.x) && Number.isFinite(point.y));
     if (values.length > 1) {
@@ -265,10 +270,13 @@ function renderLessonVisualization(content) {
       const minY = Math.min(...values.map((point) => point.y));
       const maxY = Math.max(...values.map((point) => point.y));
       const coordinates = values.map((point) => `${40 + ((point.x - minX) / (maxX - minX || 1)) * 300},${135 - ((point.y - minY) / (maxY - minY || 1)) * 100}`).join(' ');
-      return `${tableMarkup}<figure class="lesson-visual lesson-visual-chart"><svg viewBox="0 0 380 170" role="img" aria-label="${escapeHtml(alt)}"><path d="M40 20V135H350" fill="none" stroke="currentColor" stroke-opacity=".35"/><polyline points="${coordinates}" fill="none" stroke="var(--cyan)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg><figcaption>${escapeHtml(alt)}</figcaption></figure>`;
+      const xLabel = graph?.x_label || 'шаг';
+      const yLabel = graph?.y_label || 'значение';
+      const graphMarkup = `<figure class="lesson-visual lesson-visual-chart"><svg viewBox="0 0 380 190" role="img" aria-label="${escapeHtml(alt)}"><path d="M45 25V145H350" fill="none" stroke="currentColor" stroke-opacity=".35"/><polyline points="${coordinates}" fill="none" stroke="var(--cyan)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><text x="195" y="178" text-anchor="middle" fill="currentColor">${escapeHtml(xLabel)}</text><text x="14" y="88" text-anchor="middle" transform="rotate(-90 14 88)" fill="currentColor">${escapeHtml(yLabel)}</text></svg><figcaption>${escapeHtml(alt)}</figcaption></figure>`;
+      return wrapVisuals(tableMarkup, graphMarkup);
     }
   }
-  return `${tableMarkup}<p class="lesson-visual-fallback">${escapeHtml(fallback)}</p>`;
+  return tableMarkup || `<p class="lesson-visual-fallback">${escapeHtml(fallback)}</p>`;
 }
 
 function renderLessonFormula(content) {
@@ -985,6 +993,13 @@ function action(name, element = null) {
     'continue-learning': () => openLesson(state.lessonId),
     'lesson-lab': () => { setView('lab'); requestAnimationFrame(() => { const target = $('#lab-generic')?.hidden ? $('#gradient-canvas') : $('#lab-generic'); target?.scrollIntoView({behavior: 'smooth', block: 'center'}); }); },
     'generic-lab-run': () => { updateGenericLab(); showToast('Опыт пересчитан', 'success'); },
+    'visualization-tab': () => {
+      const mode = element?.dataset.visualization || 'table';
+      const visualization = element?.closest('.lesson-visualization');
+      if (!visualization) return;
+      $$('.visualization-tab', visualization).forEach((tab) => { const active = tab.dataset.visualization === mode; tab.classList.toggle('active', active); tab.setAttribute('aria-selected', String(active)); });
+      $$('.visualization-pane', visualization).forEach((pane) => { pane.hidden = pane.dataset.visualizationPane !== mode; pane.classList.toggle('active', !pane.hidden); });
+    },
     'lesson-tasks': () => setView('tasks'),
     'lesson-exam': () => setView('exam'),
     'lesson-prev': () => moveLesson(-1),

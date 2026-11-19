@@ -20,6 +20,7 @@
 .lesson-visual-svg svg,.lesson-visual-chart svg{display:block;width:100%;min-height:150px;color:var(--text-soft)}
 .lesson-visual-table{overflow-x:auto}.lesson-visual-table table{width:100%;border-collapse:collapse;color:var(--text-soft);font-size:12px}.lesson-visual-table caption{text-align:left;color:var(--text-muted);padding-bottom:8px}.lesson-visual-table th,.lesson-visual-table td{padding:7px 9px;border-bottom:1px solid var(--line);text-align:left}.lesson-visual-table th{color:var(--text)}
 .lesson-visual-fallback{color:var(--text-soft);font-size:13px;line-height:1.6}
+.visualization-tabs{display:flex;gap:6px;margin:10px 0 4px}.visualization-tab{padding:7px 11px;border:1px solid var(--line);border-radius:8px;color:var(--text-muted);background:var(--surface-2);font-size:11px}.visualization-tab.active{border-color:var(--cyan);color:var(--text);background:rgba(125,211,252,.1)}.visualization-pane[hidden]{display:none!important}
 .lesson-formulas{display:grid;gap:7px;margin:10px 0 14px}.lesson-formulas code{display:block;padding:10px 12px;border:1px solid rgba(125,211,252,.2);border-radius:9px;background:rgba(125,211,252,.06);color:var(--cyan);font-family:"IBM Plex Mono",monospace;font-size:13px;white-space:pre-wrap}
 .lesson-lecture-grid h3:first-child{margin-top:0}
 .lesson-lecture-grid p,.lesson-lecture-grid li{color:var(--text-soft);font-size:11px}
