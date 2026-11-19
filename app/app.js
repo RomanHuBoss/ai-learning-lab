@@ -889,6 +889,7 @@ async function authRequest(mode) {
     applyUserState(result.user);
     closeModal();
     await loadCurrentUser();
+    if (state.view === 'exam') await loadExams();
     closeModal();
     output.className = 'question-feedback good'; output.textContent = `Вход выполнен. Роль: ${result.user.role}. Прогресс можно сохранять в PostgreSQL.`;
     showToast('Сессия сохранена', 'success');
