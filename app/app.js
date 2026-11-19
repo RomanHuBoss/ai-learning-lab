@@ -5,6 +5,7 @@ if ('scrollRestoration' in window.history) window.history.scrollRestoration = 'm
 const state = {
   view: savedRoute?.view || localStorage.getItem('ailab:view') || 'dashboard',
   theme: localStorage.getItem('ailab:theme') || 'dark',
+  verboseTips: localStorage.getItem('ailab:verbose-tips') !== 'false',
   fontSize: Number.isFinite(savedFontSize) ? Math.max(17, savedFontSize) : 17,
   progress: localStorage.getItem('ailab:token') ? Number(localStorage.getItem('ailab:progress') || 0) : 0,
   lessonId: savedRoute?.lessonId || localStorage.getItem('ailab:lesson') || '1.01',
@@ -298,6 +299,12 @@ function applyTypography() {
   if (input) input.value = String(size);
   if (output) output.textContent = `${size} px`;
   persist();
+}
+
+function applyVerboseTips() {
+  const checkbox = $('#verbose-tips');
+  if (checkbox) checkbox.checked = state.verboseTips;
+  $$('[data-tooltip]').forEach((element) => { element.title = state.verboseTips ? element.dataset.tooltip : ''; });
 }
 
 function routeSnapshot() {
@@ -1310,6 +1317,7 @@ document.addEventListener('click', (event) => {
 });
 
 document.addEventListener('mouseover', (event) => {
+  if (!state.verboseTips) return;
   const element = event.target.closest('[data-tooltip]'); if (!element) return;
   const tooltip = document.createElement('div'); tooltip.className = 'tooltip'; tooltip.textContent = element.dataset.tooltip; document.body.append(tooltip); state.tooltips.set(element, tooltip);
   const rect = element.getBoundingClientRect(); tooltip.style.left = `${Math.min(window.innerWidth - tooltip.offsetWidth - 12, Math.max(12, rect.left - tooltip.offsetWidth + rect.width))}px`; tooltip.style.top = `${rect.bottom + 8}px`;
@@ -1323,6 +1331,7 @@ $('#term-search').addEventListener('input', (event) => renderTerms(event.target.
 $('#alumni-search')?.addEventListener('input', (event) => loadAlumni(event.target.value));
 $$('[data-theme-choice]').forEach((button) => button.addEventListener('click', () => { state.theme = button.dataset.themeChoice; applyTheme(); drawLab(); }));
 $('#reduce-motion').addEventListener('change', (event) => document.documentElement.classList.toggle('reduced-motion', event.target.checked));
+$('#verbose-tips')?.addEventListener('change', (event) => { state.verboseTips = event.target.checked; localStorage.setItem('ailab:verbose-tips', String(state.verboseTips)); applyVerboseTips(); showToast(state.verboseTips ? 'Подробные подсказки включены' : 'Подробные подсказки выключены'); });
 $('#font-size')?.addEventListener('input', (event) => { state.fontSize = Number(event.target.value); applyTypography(); });
 window.addEventListener('resize', () => { if (state.view === 'lab') drawLab(); });
 document.addEventListener('keydown', (event) => {
@@ -1350,6 +1359,6 @@ document.addEventListener('input', (event) => {
 
 $$('[data-tooltip]').forEach((element) => {
   if (!element.getAttribute('aria-label')) element.setAttribute('aria-label', `Подсказка. ${element.dataset.tooltip}`);
-  element.title = element.dataset.tooltip;
+  element.title = state.verboseTips ? element.dataset.tooltip : '';
 });
-applyTheme(); applyTypography(); renderDashboardDate(); renderProgress(); renderTaskStats(); setView(state.view); renderTerms(); loadTerms(); loadLessons(); loadCurrentUser(); drawLab();
+applyTheme(); applyTypography(); applyVerboseTips(); renderDashboardDate(); renderProgress(); renderTaskStats(); setView(state.view); renderTerms(); loadTerms(); loadLessons(); loadCurrentUser(); drawLab();
