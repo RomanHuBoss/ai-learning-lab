@@ -314,5 +314,10 @@ for index, question in enumerate(orphan_questions):
 for question in questions:
     if "старый-идентификатор-вопроса-исправлен" in question.get("misconception_tags", []):
         question["type"] = "single_choice"
+    question["prerequisite_ids"] = [
+        normalize(value)
+        for value in question.get("prerequisite_ids", [])
+        if normalize(value) in content_by_id
+    ]
 
 (ROOT / "data/questions.json").write_text(json.dumps(questions, ensure_ascii=False, indent=2) + "\n", encoding="utf8")
