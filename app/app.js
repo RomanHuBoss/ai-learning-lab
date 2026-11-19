@@ -286,6 +286,8 @@ function showToast(message, type = 'info') {
 
 function applyTheme() {
   document.documentElement.dataset.theme = state.theme;
+  const toggle = $('.theme-toggle');
+  if (toggle) toggle.setAttribute('aria-label', state.theme === 'dark' ? 'Включить светлую тему' : 'Включить тёмную тему');
   $$('.segmented button').forEach((button) => { const selected = button.dataset.themeChoice === state.theme; button.classList.toggle('selected', selected); button.setAttribute('aria-pressed', String(selected)); });
   persist();
 }
