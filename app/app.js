@@ -339,6 +339,9 @@ function setView(view) {
   if (view === 'admin' && state.currentUser?.role !== 'admin') view = 'dashboard';
   const target = $(`#view-${view}`);
   if (!target) return;
+  const shell = $('.app-shell');
+  shell?.classList.remove('sidebar-open');
+  $('.sidebar-toggle')?.setAttribute('aria-expanded', 'false');
   state.view = view;
   $$('.view').forEach((section) => section.classList.toggle('active', section === target));
   $$('.nav-item').forEach((button) => button.classList.toggle('active', button.dataset.view === view));
@@ -1237,6 +1240,14 @@ function saveProjectSteps() {
 
 function action(name, element = null) {
   const actions = {
+    'toggle-sidebar': () => {
+      const shell = $('.app-shell');
+      const toggle = $('.sidebar-toggle');
+      const open = !shell?.classList.contains('sidebar-open');
+      shell?.classList.toggle('sidebar-open', open);
+      toggle?.setAttribute('aria-expanded', String(open));
+      if (open) $('.sidebar .nav-item:not([hidden])')?.focus();
+    },
     'toggle-theme': () => { state.theme = state.theme === 'dark' ? 'light' : 'dark'; applyTheme(); drawLab(); showToast(state.theme === 'dark' ? 'Тёмная тема включена' : 'Светлая тема включена'); },
     'continue-learning': () => { closeModal(); openLesson(state.lessonId); },
     'lesson-lab': () => { setView('lab'); requestAnimationFrame(() => { const target = $('#lab-generic')?.hidden ? $('#gradient-canvas') : $('#lab-generic'); target?.scrollIntoView({behavior: 'smooth', block: 'center'}); }); },
@@ -1335,6 +1346,12 @@ $('#verbose-tips')?.addEventListener('change', (event) => { state.verboseTips = 
 $('#font-size')?.addEventListener('input', (event) => { state.fontSize = Number(event.target.value); applyTypography(); });
 window.addEventListener('resize', () => { if (state.view === 'lab') drawLab(); });
 document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && $('.app-shell')?.classList.contains('sidebar-open')) {
+    $('.app-shell').classList.remove('sidebar-open');
+    $('.sidebar-toggle')?.setAttribute('aria-expanded', 'false');
+    $('.sidebar-toggle')?.focus();
+    return;
+  }
   const backdrop = $('#modal-backdrop');
   if (!backdrop || backdrop.hidden) return;
   if (event.key === 'Escape') { event.preventDefault(); closeModal(); return; }
