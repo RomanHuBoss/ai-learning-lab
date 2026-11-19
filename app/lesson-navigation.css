@@ -28,12 +28,12 @@
 .lesson-content-footer{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:20px;padding-top:14px;border-top:1px solid var(--line);color:var(--text-muted);font-size:10px}
 .lesson-content-footer .text-button{margin-left:auto}
 .lesson-related-links{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:18px;padding:13px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);color:var(--text-muted);font-size:10px}
-.lesson-related-links .text-button{font-size:11px;text-align:left}
+.lesson-related-links .text-button{font-size:12px;text-align:left}.lesson-inline-link{font-size:14px;text-decoration:underline;text-underline-offset:3px}
 @media(max-width:760px){.lesson-lecture-grid{grid-template-columns:1fr}.lesson-content-footer .text-button{margin-left:0}}
 .lesson-content{margin-bottom:13px}
-body{font-family:Verdana,Helvetica,Arial,sans-serif;font-size:var(--base-font-size,15px);line-height:1.5}
+body{font-family:Verdana,Helvetica,Arial,sans-serif;font-size:var(--base-font-size,17px);line-height:1.55}
 h1,h2,h3{font-family:Helvetica,Arial,Verdana,sans-serif}
-.lesson-lecture-grid p,.lesson-lecture-grid li,.lesson-content-footer,.generic-lab p,.generic-lab li{font-size:13px;line-height:1.6}
+.lesson-lecture-grid p,.lesson-lecture-grid li,.lesson-content-footer,.generic-lab p,.generic-lab li{font-size:14px;line-height:1.65}
 .generic-lab{margin-bottom:13px;overflow:hidden}
 .generic-lab-header{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;padding:20px;border-bottom:1px solid var(--line)}
 .generic-lab-header h2{margin:4px 0 6px;font-size:20px}
@@ -95,3 +95,21 @@ h1,h2,h3{font-family:Helvetica,Arial,Verdana,sans-serif}
 :where([hidden]){display:none!important}
 .dashboard-grid.guest-layout .next-panel{grid-column:1 / -1}
 .task-layout.single-column{grid-template-columns:minmax(0,1fr);max-width:1000px}
+
+/* Базовый размер текста рассчитан на чтение без постоянного увеличения страницы. */
+.lesson-content,.lesson-content p,.lesson-content li{font-size:15px;line-height:1.7}
+.lesson-content h3{font-size:18px;line-height:1.3}
+.lesson-plan,.lesson-content-footer,.lesson-related-links{font-size:14px}
+.lesson-visual-table table{font-size:14px}
+.lesson-visual figcaption,.lesson-visual-fallback{font-size:14px}
+.lesson-formulas code{font-size:15px}
+.generic-lab-header p,.generic-lab-footer,.generic-lab p,.generic-lab li{font-size:14px;line-height:1.6}
+.generic-control,.generic-result{font-size:14px}
+.lesson-inline-link{display:inline-block;margin-top:8px;font-size:14px}
+.nav-item{font-size:14px}
+.page-lead{font-size:15px}
+.button{font-size:14px}
+.text-button{font-size:13px}
+.panel p,.panel li{line-height:1.6}
+
+.exam-guide{display:flex;align-items:flex-start;gap:24px;margin-bottom:13px}.exam-guide h2{margin:3px 0 0;font-size:19px}.exam-guide ol{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:0;padding:0;list-style-position:inside;flex:1;color:var(--text-soft);font-size:13px}.exam-guide li{padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface-2)}@media(max-width:900px){.exam-guide{display:block}.exam-guide ol{margin-top:14px;grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:620px){.exam-guide ol{grid-template-columns:1fr}}

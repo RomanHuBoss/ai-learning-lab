@@ -1,7 +1,8 @@
+const savedFontSize = Number(localStorage.getItem('ailab:font-size'));
 const state = {
   view: localStorage.getItem('ailab:view') || 'dashboard',
   theme: localStorage.getItem('ailab:theme') || 'dark',
-  fontSize: Number(localStorage.getItem('ailab:font-size') || 15),
+  fontSize: Number.isFinite(savedFontSize) ? Math.max(17, savedFontSize) : 17,
   progress: Number(localStorage.getItem('ailab:progress') || 0),
   lessonId: localStorage.getItem('ailab:lesson') || '1.01',
   lessons: [],
@@ -177,7 +178,7 @@ function applyTheme() {
 }
 
 function applyTypography() {
-  const size = Math.max(14, Math.min(19, Number(state.fontSize) || 15));
+  const size = Math.max(16, Math.min(21, Number(state.fontSize) || 17));
   state.fontSize = size;
   document.documentElement.style.setProperty('--base-font-size', `${size}px`);
   const input = $('#font-size');
@@ -317,8 +318,9 @@ function renderLesson() {
   const visualization = renderLessonVisualization(content);
   const formulas = renderLessonFormula(content);
   const remediation = content.remediation?.if_wrong || 'Вернитесь к предыдущему уроку и повторите ручной пример.';
-  const lessonLinks = `<div class="lesson-related-links"><span>Связи урока</span>${previous ? `<button class="text-button" data-action="open-lesson" data-lesson-id="${escapeHtml(previous.id)}">← ${escapeHtml(previous.id)} · ${escapeHtml(lessonTitle(previous))}</button>` : '<span>Это первый урок курса</span>'}${next ? `<button class="text-button" data-action="open-lesson" data-lesson-id="${escapeHtml(next.id)}">${escapeHtml(next.id)} · ${escapeHtml(lessonTitle(next))} →</button>` : '<span>Это последний урок курса</span>'}</div>`;
-  $('#lesson-content').innerHTML = `<div class="lesson-content-header"><div><span class="panel-kicker">ЛЕКЦИЯ · УРОК ${escapeHtml(lesson.id)}</span><h2>${escapeHtml(title)}</h2></div><span class="lesson-duration">${content.duration_minutes || lesson.duration_minutes || '—'} мин</span></div><div class="lesson-content-actions"><button class="button button-primary" data-action="lesson-lab">Открыть лабораторию ↓</button><button class="button button-ghost" data-action="lesson-tasks">Перейти к проверке →</button></div><details class="lesson-plan"><summary>План урока</summary><ol>${list(lessonPlan, ['Интуиция', 'Практика', 'Проверка понимания'])}</ol></details><div class="lesson-lecture-grid"><div><h3>Что уже известно</h3><ul>${list(known, ['Базовые понятия предыдущих уроков'])}</ul><h3>Цели урока</h3><ul>${list(objectives, ['Понять основную идею темы', 'Применить её в практике'])}</ul><h3>Интуиция</h3><p>${escapeHtml(content.intuition || 'Сначала сформулируйте идею своими словами, затем проверьте её на маленьком примере.')}</p><h3>Визуализация</h3>${visualization}<h3>Формальное объяснение</h3><p>${escapeHtml(content.formal_explanation || 'Свяжите обозначения, входы, выходы и ограничение метода.')}</p>${formulas}</div><div><h3>Почему это важно</h3><p>${escapeHtml(content.why_it_matters || 'Эта тема связывает фундаментальные понятия с рабочими ML/AI-сценариями.')}</p><h3>Ручной пример</h3><p>${escapeHtml(content.manual_example || 'Решите небольшой пример вручную и проверьте численный результат.')}</p><h3>Типичные заблуждения</h3><ul>${list(misconceptions, ['Не подменяйте интуицию формальным условием.', 'Проверяйте результат на новых данных.'])}</ul><h3>Мини-тест</h3><p>Идентификатор проверки <strong>${escapeHtml(content.mini_test || lesson.assessment || 'после лекции')}</strong>. После ответа разберите причину ошибки.</p><h3>Если ответ неверен</h3><p>${escapeHtml(remediation)}</p><h3>Короткое резюме</h3><ul>${list(summary, ['Повторите ключевую идею', 'Сделайте практическое упражнение'])}</ul></div></div>${content.code_example ? `<details class="lesson-code"><summary>Пример кода</summary><pre><code>${escapeHtml(content.code_example)}</code></pre></details>` : ''}${lessonLinks}<div class="lesson-content-footer"><span>Лаборатория <strong>${escapeHtml(labKindLabel(labKind(content, lesson)))}</strong></span><span>Упражнение <strong>${escapeHtml(content.independent_exercise || lesson.exercise_id || 'практика')}</strong></span><button class="text-button" data-action="lesson-exam">Открыть экзамен →</button></div>`;
+  const lessonLinks = `<div class="lesson-related-links"><span>Связи урока</span>${previous ? `<button class="text-button" data-action="open-lesson" data-lesson-id="${escapeHtml(previous.id)}">← Предыдущий урок · ${escapeHtml(lessonTitle(previous))}</button>` : '<span>Это первый урок курса</span>'}${next ? `<button class="text-button" data-action="open-lesson" data-lesson-id="${escapeHtml(next.id)}">Следующий урок · ${escapeHtml(lessonTitle(next))} →</button>` : '<span>Это последний урок курса</span>'}</div>`;
+  const assessmentLink = `<button class="text-button lesson-inline-link" data-action="lesson-tasks">Пройти мини-тест к уроку →</button>`;
+  $('#lesson-content').innerHTML = `<div class="lesson-content-header"><div><span class="panel-kicker">ЛЕКЦИЯ · УРОК ${escapeHtml(lesson.id)}</span><h2>${escapeHtml(title)}</h2></div><span class="lesson-duration">${content.duration_minutes || lesson.duration_minutes || '—'} мин</span></div><div class="lesson-content-actions"><button class="button button-primary" data-action="lesson-lab">Открыть лабораторию ↓</button><button class="button button-ghost" data-action="lesson-tasks">Перейти к проверке →</button></div><details class="lesson-plan"><summary>План урока</summary><ol>${list(lessonPlan, ['Интуиция', 'Визуализация', 'Практика', 'Проверка понимания'])}</ol></details><div class="lesson-lecture-grid"><div><h3>Что уже известно</h3><ul>${list(known, ['Базовые понятия предыдущих уроков'])}</ul><h3>Цели урока</h3><ul>${list(objectives, ['Понять основную идею темы', 'Применить её в практике'])}</ul><h3>Интуиция</h3><p>${escapeHtml(content.intuition || 'Сначала сформулируйте идею своими словами, затем проверьте её на маленьком примере.')}</p><h3>Визуализация</h3>${visualization}<h3>Формальное объяснение</h3><p>${escapeHtml(content.formal_explanation || 'Свяжите обозначения, входы, выходы и ограничение метода.')}</p>${formulas}</div><div><h3>Почему это важно</h3><p>${escapeHtml(content.why_it_matters || 'Эта тема связывает фундаментальные понятия с рабочими ML/AI-сценариями.')}</p><h3>Ручной пример</h3><p>${escapeHtml(content.manual_example || 'Решите небольшой пример вручную и проверьте численный результат.')}</p><h3>Типичные заблуждения</h3><ul>${list(misconceptions, ['Не подменяйте интуицию формальным условием.', 'Проверяйте результат на новых данных.'])}</ul><h3>Проверка понимания</h3><p>Ответьте на вопрос по этой лекции и разберите объяснение ошибки. ${assessmentLink}</p><h3>Если ответ неверен</h3><p>${escapeHtml(remediation)}</p><h3>Короткое резюме</h3><ul>${list(summary, ['Повторите ключевую идею', 'Сделайте практическое упражнение'])}</ul></div></div>${content.code_example ? `<details class="lesson-code"><summary>Пример кода</summary><pre><code>${escapeHtml(content.code_example)}</code></pre></details>` : ''}${lessonLinks}<div class="lesson-content-footer"><span>Лаборатория <strong>${escapeHtml(labKindLabel(labKind(content, lesson)))}</strong></span><span>Практическое задание <strong>выполните в лаборатории</strong></span><button class="text-button" data-action="lesson-exam">Перейти к итоговому экзамену →</button></div>`;
   persist();
   renderPathState();
   renderInteractiveLab(content, lesson);
@@ -713,11 +715,13 @@ async function loadExams() {
   const list = $('#exam-list');
   try {
     const exams = await fetchJson('/api/exams');
-    const examAction = localStorage.getItem('ailab:token') ? 'Начать →' : 'Войти для начала →';
-    list.innerHTML = exams.map((exam) => `<div class="role-row"><span class="mastery-icon cyan">◉</span><div><strong>${escapeHtml(exam.title)}</strong><span>версия ${escapeHtml(exam.version)} · ${exam.question_count} вопросов · проходной порог ${exam.pass_percent}%</span></div><button class="text-button" data-exam-start="${exam.id}">${examAction}</button></div>`).join('') || '<div class="empty-state">Опубликованных экзаменов пока нет.</div>';
+    const authenticated = Boolean(localStorage.getItem('ailab:token'));
+    const examAction = authenticated ? 'Начать экзамен →' : 'Войти, чтобы начать →';
+    list.innerHTML = exams.map((exam) => `<div class="role-row"><span class="mastery-icon cyan">◉</span><div><strong>${escapeHtml(exam.title)}</strong><span>${exam.question_count} вопросов · проходной порог ${exam.pass_percent}%</span></div><button class="text-button" data-exam-start="${exam.id}">${examAction}</button></div>`).join('') || '<div class="empty-state">Опубликованных экзаменов пока нет.</div>';
     if (localStorage.getItem('ailab:token')) {
       const attempts = await fetchJson('/api/attempts/me');
-      $('#attempt-list').innerHTML = attempts.map((attempt) => `<div class="role-row"><span class="mastery-icon ${attempt.passed ? 'cyan' : 'amber'}">${attempt.passed ? '✓' : '·'}</span><div><strong>Попытка #${attempt.id}</strong><span>${attempt.score_percent}% · ${attempt.status}</span></div></div>`).join('') || '<div class="empty-state">Попыток пока нет.</div>';
+      const statusLabel = (attempt) => attempt.passed ? 'экзамен пройден' : ({submitted: 'завершена', in_progress: 'в процессе'}[attempt.status] || 'ожидает отправки');
+      $('#attempt-list').innerHTML = attempts.map((attempt, index) => `<div class="role-row"><span class="mastery-icon ${attempt.passed ? 'cyan' : 'amber'}">${attempt.passed ? '✓' : '·'}</span><div><strong>Попытка ${index + 1}</strong><span>${attempt.score_percent}% · ${statusLabel(attempt)}</span></div></div>`).join('') || '<div class="empty-state">Попыток пока нет.</div>';
     }
   } catch (error) {
     list.innerHTML = '<div class="empty-state">Войдите в аккаунт, чтобы начать экзамен.</div>';
@@ -758,6 +762,10 @@ async function loadTaskForCurrentLesson() {
 }
 
 async function startExam(examId) {
+  if (!localStorage.getItem('ailab:token')) {
+    openModal('Вход для экзамена', '<p>Экзамен сохраняет попытку и результат в вашем профиле, поэтому сначала войдите или зарегистрируйтесь.</p><p>После входа вернитесь в раздел «Экзамен» и нажмите «Начать экзамен».</p>', '<button class="button button-ghost" data-action="close-modal">Позже</button><button class="button button-primary" data-action="open-profile">Войти или зарегистрироваться →</button>');
+    return;
+  }
   try {
     const started = await fetchJson(`/api/exams/${examId}/start`, {method: 'POST'});
     state.exam.attemptId = started.attempt_id; state.exam.questions = [];
