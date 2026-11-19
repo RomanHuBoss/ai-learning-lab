@@ -9,6 +9,10 @@
 .graph-node[role=button]{cursor:pointer}
 .graph-node[role=button]:focus-visible{outline:3px solid var(--cyan-strong);outline-offset:3px}
 .lesson-content-actions{display:flex;gap:9px;flex-wrap:wrap;margin:16px 0 22px}
+.lesson-plan{margin:0 0 20px;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--surface-2);color:var(--text-soft);font-size:12px}
+.lesson-plan summary{cursor:pointer;color:var(--cyan);font-weight:600}
+.lesson-plan ol{margin:10px 0 0;padding-left:20px}
+.lesson-plan li+li{margin-top:4px}
 .lesson-lecture-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px}
 .lesson-lecture-grid h3{margin:18px 0 7px;font-size:14px}
 .lesson-lecture-grid h3:first-child{margin-top:0}
