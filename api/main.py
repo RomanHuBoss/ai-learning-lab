@@ -340,6 +340,7 @@ class RolePayload(BaseModel):
 
 
 class ProfilePayload(BaseModel):
+    display_name: str = Field(default="", max_length=160)
     bio: str = Field(default="", max_length=2_000)
     photo_url: str | None = Field(default=None, max_length=500)
     city: str | None = Field(default=None, max_length=120)
@@ -437,6 +438,7 @@ def get_my_profile(user: User = Depends(get_current_user), db: Session = Depends
 def update_my_profile(payload: ProfilePayload, user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> dict[str, Any]:
     profile = ensure_profile(db, user)
     values = payload.model_dump()
+    display_name = values.pop("display_name").strip()
     start_date = values.pop("start_date")
     values["interests"] = json.dumps(values["interests"], ensure_ascii=False)
     values.pop("completion_percent", None)
@@ -448,6 +450,8 @@ def update_my_profile(payload: ProfilePayload, user: User = Depends(get_current_
     if requested_status in {"completed", "graduate"} and (completion_percent < 100 or not profile.final_exam_passed):
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Статус выпуска доступен после завершения курса и экзамена")
     profile.start_date = datetime.fromisoformat(start_date) if start_date else None
+    if display_name:
+        user.display_name = display_name
     for key, value in values.items():
         setattr(profile, key, value)
     user.display_name = user.display_name.strip() or "Ученик AI Learning Lab"

@@ -24,10 +24,11 @@ def test_profile_visibility_and_alumni_catalog():
     with SessionLocal() as db:
         db.get(User, user["user"]["id"]).profile.final_exam_passed = True
         db.commit()
-    update = client.put("/api/profile/me", headers=headers, json={"bio": "Инженер ML", "status": "graduate", "level": "младший практик", "interests": ["GNN", "RAG"], "city": "Казань", "country": "Россия", "cohort_name": "Поток 2026", "start_date": "2026-09-01", "portfolio_url": "https://example.com/portfolio", "publish_in_catalog": True})
+    update = client.put("/api/profile/me", headers=headers, json={"display_name": "Выпускник ML", "bio": "Инженер ML", "status": "graduate", "level": "младший практик", "interests": ["GNN", "RAG"], "city": "Казань", "country": "Россия", "cohort_name": "Поток 2026", "start_date": "2026-09-01", "portfolio_url": "https://example.com/portfolio", "publish_in_catalog": True})
     assert update.status_code == 200
     restored = client.get("/api/profile/me", headers=headers)
     assert restored.status_code == 200
+    assert restored.json()["display_name"] == "Выпускник ML"
     assert restored.json()["level"] == "младший практик"
     assert restored.json()["interests"] == ["GNN", "RAG"]
     assert restored.json()["city"] == "Казань"
