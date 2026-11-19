@@ -26,20 +26,78 @@ for question in questions:
 
 def lab_for(title):
     value = title.lower()
-    if "производн" in value or "градиент" in value or "оптимиз" in value or "потер" in value:
+    exact = {
+        "типы данных и коллекции": "type-inspector",
+        "pandas и визуализация": "data-cleaning",
+        "выборка и доверие к оценке": "metric-choice",
+        "accuracy, precision, recall и f1": "metric-choice",
+        "обучение с учителем": "classification-boundary",
+        "линейная регрессия": "classification-boundary",
+        "логистическая регрессия": "classification-boundary",
+        "метод ближайших соседей": "classification-boundary",
+        "перекрёстная проверка": "metric-choice",
+        "k-средних": "tensor-shapes",
+        "отслеживание эксперимента": "experiment-tracker",
+        "обратное распространение ошибки": "backprop",
+        "стратегии декодирования": "tokenization",
+        "передача сообщений": "graph-playground",
+        "интервалы прогноза": "metric-choice",
+        "дрейф распределения": "metric-choice",
+        "состояние, действие и награда": "metric-choice",
+        "ограничения синтетической среды": "concept-map",
+        "логи, метрики и трассировка": "experiment-tracker",
+        "мониторинг качества": "experiment-tracker",
+    }
+    if value in exact:
+        return exact[value]
+    if value in ("функции и графики", "функции как математические модели", "условия, циклы и функции"):
+        return "function-plot"
+    if "дерев" in value or "лес" in value or "бустинг" in value:
+        return "tree-depth"
+    if "граф" in value or "узл" in value or "рёбр" in value or "ребр" in value:
+        return "graph-playground"
+    if any(token in value for token in ("рекур", "lstm", "gru", "последоват", "скрытое состояние", "длинной зависим", "временн", "лаг", "walk-forward")):
+        return "rnn-flow"
+    if any(token in value for token in ("среднее", "медиан", "mae", "mse", "rmse", "статист", "bootstrap", "корреляц", "эксперимент", "ошибки", "метрик", "качества", "рекоменд", "холодный старт", "epsilon", "regret", "вероят", "случайн")):
+        return "metric-choice"
+    if any(token in value for token in ("кластер", "компонент", "numpy", "вектор", "матриц", "тензор")):
+        return "tensor-shapes"
+    if any(token in value for token in ("перцептрон", "нейрон", "активац", "xor", "прямой проход")):
+        return "forward-pass"
+    if any(token in value for token in ("обратное распространение", "sgd", "adam", "momentum")):
+        return "backprop"
+    if any(token in value for token in ("вниман", "query", "key", "value")):
+        return "attention-map"
+    if "токен" in value or "следующий токен" in value:
+        return "tokenization"
+    if "позицион" in value or "transformer" in value:
+        return "transformer-flow"
+    if any(token in value for token in ("свёртк", "изображ", "перенос обучения", "генератив")):
+        return "convolution"
+    if any(token in value for token in ("веса", "параметр", "оборуд", "gpu", "vram", "квантиз")):
+        return "hardware-selector"
+    if any(token in value for token in ("инференс", "контекстное окно", "kv-кэш", "память")):
+        return "memory-budget"
+    if any(token in value for token in ("api", "docker", "health")):
+        return "api-design"
+    if any(token in value for token in ("sandbox", "секрет", "права", "приватност")):
+        return "sandbox"
+    if any(token in value for token in ("лог", "монитор", "версиониров", "резерв", "откат", "ci")):
+        return "experiment-tracker"
+    if any(token in value for token in ("защит", "эконом", "tco", "системн", "лиценз", "архитектур", "ограничен")):
+        return "project-defense"
+    if any(token in value for token in ("rag", "поиск", "галлюцинац", "агент", "полномоч", "lora")):
+        return "concept-map"
+    if "порог" in value or "классификац" in value:
+        return "classification-boundary"
+    if any(token in value for token in ("пропуск", "выброс", "категор", "таблиц", "данн", "разбиен", "кодирован", "выборк")):
+        return "data-cleaning"
+    if any(token in value for token in ("производн", "градиент", "оптимиз", "потер")):
         return "gradient-descent"
     if "коллекц" in value or "типы данных" in value:
         return "type-inspector"
-    if "перемен" in value or "тип" in value:
+    if any(token in value for token in ("перемен", "тип", "python", "услов", "цик", "функц")):
         return "variable-playground"
-    if "вероят" in value or "случайн" in value:
-        return "metric-choice"
-    if "услов" in value or "цик" in value or "функц" in value:
-        return "function-plot"
-    if "numpy" in value or "вектор" in value or "матриц" in value:
-        return "tensor-shapes"
-    if "данн" in value or "pandas" in value or "пропуск" in value or "категор" in value or "разбиен" in value:
-        return "data-cleaning"
     return "concept-map"
 
 
@@ -264,6 +322,9 @@ for lesson in content["lessons"]:
             ["2", lesson["title"], formulas[1] if len(formulas) > 1 else formulas[0], "сопоставить с графиком и ограничениями"],
         ],
     }
+
+for lesson in content["lessons"]:
+    lesson["interactive_lab"] = lab_for(lesson["title"])
 
 (ROOT / "data/lesson_content.json").write_text(json.dumps(content, ensure_ascii=False, indent=2) + "\n", encoding="utf8")
 
