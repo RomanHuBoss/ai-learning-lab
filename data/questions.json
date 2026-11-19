@@ -70,7 +70,7 @@
   },
   {
     "id": "q-005",
-    "type": "numeric",
+    "type": "single_choice",
     "lesson_id": "1.01",
     "prompt": "Какое правило относится к теме «Переменные и выражения»?",
     "answer": "ŷ = b + w₁x₁ + w₂x₂",
@@ -243,7 +243,7 @@
   },
   {
     "id": "q-014",
-    "type": "multi_choice",
+    "type": "single_choice",
     "lesson_id": "2.02",
     "prompt": "Какое правило относится к теме «Условия, циклы и функции»?",
     "options": [
@@ -618,7 +618,7 @@
   },
   {
     "id": "q-043",
-    "type": "multi_choice",
+    "type": "single_choice",
     "lesson_id": "4.02",
     "prompt": "Какое правило относится к теме «Производная и наклон»?",
     "options": [
@@ -742,7 +742,7 @@
   },
   {
     "id": "q-049",
-    "type": "multi_choice",
+    "type": "single_choice",
     "lesson_id": "5.04",
     "prompt": "Какое правило относится к теме «Случайные величины»?",
     "options": [
@@ -763,7 +763,7 @@
   },
   {
     "id": "q-031",
-    "type": "numeric",
+    "type": "single_choice",
     "lesson_id": "6.01",
     "prompt": "Какое правило относится к теме «Среднее, медиана и разброс»?",
     "answer": "MAE = (1/n) · Σ|yᵢ − ŷᵢ|",

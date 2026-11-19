@@ -304,10 +304,15 @@ for index, question in enumerate(orphan_questions):
     lesson = content_by_id[lesson_id]
     formula = str((lesson.get("formulas") or ["результат = f(вход)"])[0])
     question["lesson_id"] = lesson_id
+    question["type"] = "single_choice"
     question["prompt"] = f"Какое правило относится к теме «{lesson['title']}»?"
     question["options"] = [formula, "Сделать вывод без данных и описания ограничений", "Выбрать самый сложный метод без проверки"]
     question["answer"] = formula
     question["solution"] = f"В теме «{lesson['title']}» применяется правило «{formula}». Его нужно связать с входными данными и проверить численный результат."
     question["misconception_tags"] = ["старый-идентификатор-вопроса-исправлен", f"lesson-{lesson_id}"]
+
+for question in questions:
+    if "старый-идентификатор-вопроса-исправлен" in question.get("misconception_tags", []):
+        question["type"] = "single_choice"
 
 (ROOT / "data/questions.json").write_text(json.dumps(questions, ensure_ascii=False, indent=2) + "\n", encoding="utf8")
