@@ -32,7 +32,7 @@ let terms = [
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
-const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (character) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[character]));
+const escapeHtml = (value) => String(value ?? '').replace(/\bprerequisites?\b/gi, 'предыдущий урок').replace(/[&<>"']/g, (character) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[character]));
 
 function persist() {
   localStorage.setItem('ailab:view', state.view);
@@ -917,7 +917,7 @@ function action(name, element = null) {
     'lesson-prev': () => moveLesson(-1),
     'lesson-next': () => moveLesson(1),
     'select-module': () => { state.selectedModuleId = element?.dataset.moduleId || state.selectedModuleId; renderPathGraph(); },
-    'open-diagnostic': () => openModal('Входная диагностика', '<p>Демо-диагностика состоит из 36 адаптивных вопросов. Ответы помогут выбрать темп и открыть первый prerequisite-узел.</p><div class="modal-code">01 · арифметика и функции<br>02 · Python и алгоритмы<br>03 · вероятность и статистика<br>04 · интуиция машинного обучения</div>', '<button class="button button-ghost" data-action="close-modal">Позже</button><button class="button button-primary" data-action="start-diagnostic">Начать диагностику →</button>'),
+    'open-diagnostic': () => openModal('Входная диагностика', '<p>Демо-диагностика состоит из 36 адаптивных вопросов. Ответы помогут выбрать темп и открыть первый узел графа связей.</p><div class="modal-code">01 · арифметика и функции<br>02 · Python и алгоритмы<br>03 · вероятность и статистика<br>04 · интуиция машинного обучения</div>', '<button class="button button-ghost" data-action="close-modal">Позже</button><button class="button button-primary" data-action="start-diagnostic">Начать диагностику →</button>'),
     'start-diagnostic': () => { closeModal(); showToast('Диагностика запланирована · первый блок готов'); setView('tasks'); },
     'open-review': () => openModal('Повторение · функция потерь', '<p>Сравните две точки на параболе и объясните, почему знак градиента меняет направление шага.</p><div class="modal-code">L(w) = w²<br>∂L/∂w = 2w<br><br>Если w &lt; 0, градиент отрицательный, поэтому шаг увеличивает w.</div>', '<button class="button button-primary" data-action="go-lab">Открыть лабораторию →</button>'),
     'go-lab': () => { closeModal(); setView('lab'); },
