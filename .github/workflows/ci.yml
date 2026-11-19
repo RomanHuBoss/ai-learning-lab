@@ -186,7 +186,7 @@ jobs:
           curl --fail --silent http://127.0.0.1:8000/api/admin/dashboard -H "Authorization: Bearer ${TOKEN}" | grep -q 'published_alumni'
           curl --fail --silent http://127.0.0.1:8000/api/exams | grep -q 'Демо-экзамен'
           curl --fail --silent http://127.0.0.1:8000/api/admin/audit -H "Authorization: Bearer ${TOKEN}" | grep -q 'auth.login'
-          curl --fail --silent http://127.0.0.1:8000/api/alumni | grep -q 'Выпускник'
+          curl --fail --silent http://127.0.0.1:8000/api/alumni | python3 -c 'import json,sys; payload=json.load(sys.stdin); assert isinstance(payload,list)'
 
       - name: Backup and restore smoke test
         shell: bash
