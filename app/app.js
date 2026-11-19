@@ -84,13 +84,17 @@ function renderPathGraph() {
   const canvas = $('#graph-canvas');
   if (!tabs || !canvas || !state.lessons.length) return;
   const modules = state.modules.length ? state.modules : [...new Map(state.lessons.map((lesson) => [lesson.module_id || `m-${lesson.id.split('.')[0]}`, {id: lesson.module_id || `m-${lesson.id.split('.')[0]}`, title: lesson.stage || 'Модуль'}])).values()];
+  const moduleLabel = (module) => module.stage || module.display_name || module.title || 'Модуль';
   const activeLesson = currentLesson();
   const selectedId = state.selectedModuleId && modules.some((module) => module.id === state.selectedModuleId) ? state.selectedModuleId : activeLesson?.module_id || modules[0]?.id;
   state.selectedModuleId = selectedId || '';
-  tabs.innerHTML = modules.map((module, index) => `<button class="path-module-tab ${module.id === selectedId ? 'active' : ''}" role="tab" aria-selected="${module.id === selectedId}" data-action="select-module" data-module-id="${escapeHtml(module.id)}">${String(index + 1).padStart(2, '0')} · ${escapeHtml(module.title || module.stage || 'Модуль')}</button>`).join('');
+  tabs.innerHTML = modules.map((module, index) => `<button class="path-module-tab ${module.id === selectedId ? 'active' : ''}" role="tab" aria-selected="${module.id === selectedId}" data-action="select-module" data-module-id="${escapeHtml(module.id)}">${String(index + 1).padStart(2, '0')} · ${escapeHtml(moduleLabel(module))}</button>`).join('');
   const module = modules.find((item) => item.id === selectedId) || modules[0];
   const moduleLessons = state.lessons.filter((lesson) => (lesson.module_id || `m-${lesson.id.split('.')[0]}`) === module.id);
-  $('#path-module-title').textContent = `${module.title || module.stage || 'Модуль'} · ${moduleLessons.length} урока`;
+  const moduleIndex = modules.findIndex((item) => item.id === module.id);
+  $('#path-module').textContent = String(Math.max(0, moduleIndex) + 1).padStart(2, '0');
+  $('#path-module-name').textContent = moduleLabel(module);
+  $('#path-module-title').textContent = `${moduleLabel(module)} · ${moduleLessons.length} урока`;
   $('#path-module-description').textContent = module.description || module.focus || 'Уроки модуля связаны prerequisite-переходами.';
   const positions = moduleLessons.map((_, index) => [120 + index * 240, 200]);
   const lines = moduleLessons.slice(1).map((_, index) => `<path d="M${positions[index][0]} 200 L${positions[index + 1][0]} 200"/>`).join('');
@@ -150,7 +154,7 @@ function renderDashboardLesson() {
   $('#dashboard-lesson-number').textContent = number.padStart(2, '0');
   $('#dashboard-lesson-module').textContent = `МОДУЛЬ ${moduleNumber.padStart(2, '0')} · ${lesson.stage || 'ОСНОВЫ'}`;
   $('#dashboard-lesson-title').textContent = title;
-  $('#dashboard-lesson-description').textContent = content.why_it_matters || lesson.description || 'Начните с первого урока курса и двигайтесь по prerequisite-графу.';
+  $('#dashboard-lesson-description').textContent = content.why_it_matters || lesson.description || 'Начните с первого урока курса и двигайтесь по графу связей.';
   $('#dashboard-lesson-meta').textContent = `◷ ${content.duration_minutes || lesson.duration_minutes || 35} мин · ◌ Лекция и практика`;
 }
 
@@ -853,7 +857,7 @@ function action(name, element = null) {
     'project-run-check': runProjectCheck,
     'project-open-sandbox': () => action('open-code-runner'),
     'project-save': saveProjectSteps,
-    'new-project': () => openModal('Новый проект', '<p>Выберите основу для портфолио. Сейчас доступны 6 сквозных сценариев, которые открываются по prerequisite-графу.</p><div class="modal-actions"><button class="button button-primary" data-action="start-project">Предсказатель стоимости →</button></div>'),
+    'new-project': () => openModal('Новый проект', '<p>Выберите основу для портфолио. Сейчас доступны 6 сквозных сценариев, которые открываются по графу связей курса.</p><div class="modal-actions"><button class="button button-primary" data-action="start-project">Предсказатель стоимости →</button></div>'),
     'tutor': () => openModal('AI-тьютор · режим наводящих вопросов', '<p>Тьютор сначала просит вашу попытку, затем даёт подсказку и цитирует материалы курса. Готовое решение не раскрывается до попытки.</p><label class="range-label" for="tutor-question">Вопрос</label><textarea id="tutor-question" rows="3" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;color:var(--text);background:var(--surface-2)" placeholder="Например, почему градиент меняет знак?"></textarea><label class="range-label" for="tutor-attempt">Ваша попытка</label><textarea id="tutor-attempt" rows="3" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;color:var(--text);background:var(--surface-2)" placeholder="Что вы уже проверили?"></textarea><div id="tutor-output" class="question-feedback" role="status"></div>', '<button class="button button-ghost" data-action="go-lab">Открыть лабораторию</button><button class="button button-primary" data-action="tutor-submit">Спросить тьютора →</button>'),
     'tutor-submit': submitTutor,
     'show-all-activity': () => openModal('История активности', '<p>Сегодня · 18:42 · урок «Среднее и медиана» · +24 XP</p><p>Сегодня · 17:15 · лаборатория «Линейная регрессия» · 86%</p><p>Вчера · 21:03 · достижение «Первый график» · +50 XP</p>'),
