@@ -263,10 +263,16 @@ function renderLesson() {
 
 function labKind(content, lesson) {
   const value = content.interactive_lab || '';
-  if (value) return value;
+  if (value && value !== 'concept-map') return value;
   const title = `${lesson.title || ''} ${lesson.description || ''}`.toLowerCase();
-  if (/граф|узл|ребр|рекоменд/.test(title)) return 'graph-playground';
+  if (/граф|узл|ребр/.test(title)) return 'graph-playground';
   if (/рекур|lstm|gru|последоват|временн|lag|walk-forward/.test(title)) return 'rnn-flow';
+  if (/среднее|медиан|mae|mse|rmse|статист|bootstrap|корреляц|эксперимент|ошибки|метрик|качества|рекоменд|холодный старт|epsilon|regret/.test(title)) return 'metric-choice';
+  if (/кластер|компонент/.test(title)) return 'tensor-shapes';
+  if (/перцептрон|нейрон|активац|xor|прямой проход/.test(title)) return 'forward-pass';
+  if (/вниман|query|key|value/.test(title)) return 'attention-map';
+  if (/свёртк|изображ|перенос обучения|генератив/.test(title)) return 'convolution';
+  if (/галлюцинац|rag|поиск|контекст|агент|полномоч/.test(title)) return 'concept-map';
   if (/памят|контекст|токен|kv-/.test(title)) return 'memory-budget';
   if (/вес|инференс|оборуд|gpu|vram|квантиз/.test(title)) return 'hardware-selector';
   if (/метрик|accuracy|precision|recall|f1|качества|порог/.test(title)) return 'metric-choice';
