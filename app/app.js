@@ -229,13 +229,30 @@ function renderLessonVisualization(content) {
   const fallback = visualization.fallback || 'Схема и маленький численный пример помогают связать формулу с наблюдаемым поведением.';
   const alt = visualization.alt || 'Иллюстрация к теме урока';
   if (visualization.svg) return `<figure class="lesson-visual lesson-visual-svg" role="img" aria-label="${escapeHtml(alt)}">${visualization.svg}<figcaption>${escapeHtml(alt)}</figcaption></figure>`;
-  const table = visualization.table;
+  const table = visualization.table || content.table;
   if (table) {
     const headers = table.headers || table.columns || [];
     const rows = table.rows || [];
     return `<figure class="lesson-visual lesson-visual-table"><table><caption>${escapeHtml(table.caption || alt)}</caption><thead><tr>${headers.map((header) => `<th scope="col">${escapeHtml(header)}</th>`).join('')}</tr></thead><tbody>${rows.map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join('')}</tr>`).join('')}</tbody></table></figure>`;
   }
-  const points = visualization.points;
+  const graph = visualization.graph;
+  if (graph?.type === 'network' || graph?.type === 'flow') {
+    const nodes = graph.nodes || [];
+    const edges = graph.edges || [];
+    const positions = nodes.map((node, index) => [70 + (index % 4) * 90, 60 + Math.floor(index / 4) * 80]);
+    const lines = edges.map((edge) => {
+      const start = positions[nodes.indexOf(edge[0])] || [0, 0];
+      const end = positions[nodes.indexOf(edge[1])] || [0, 0];
+      return `<path d="M${start[0]} ${start[1]} L${end[0]} ${end[1]}" stroke="var(--cyan)" stroke-width="3"/>`;
+    }).join('');
+    const shapes = nodes.map((node, index) => {
+      const [x, y] = positions[index];
+      return graph.type === 'flow' ? `<rect x="${x - 35}" y="${y - 18}" width="70" height="36" rx="8" fill="rgba(125,211,252,.12)" stroke="var(--cyan)"/><text x="${x}" y="${y + 5}" text-anchor="middle" fill="currentColor">${escapeHtml(node)}</text>` : `<circle cx="${x}" cy="${y}" r="24" fill="rgba(125,211,252,.12)" stroke="var(--cyan)"/><text x="${x}" y="${y + 5}" text-anchor="middle" fill="currentColor">${escapeHtml(node)}</text>`;
+    }).join('');
+    return `<figure class="lesson-visual lesson-visual-chart"><svg viewBox="0 0 380 170" role="img" aria-label="${escapeHtml(alt)}">${lines}${shapes}</svg><figcaption>${escapeHtml(alt)}</figcaption></figure>`;
+  }
+  const graphSeries = graph?.series || [];
+  const points = visualization.points || (graphSeries.length ? graphSeries[0].values.map((value, index) => ({x: index + 1, y: Array.isArray(value) ? value[1] : value})) : null);
   if (Array.isArray(points) && points.length > 1) {
     const values = points.map((point) => ({x: Number(point.x), y: Number(point.y)})).filter((point) => Number.isFinite(point.x) && Number.isFinite(point.y));
     if (values.length > 1) {
