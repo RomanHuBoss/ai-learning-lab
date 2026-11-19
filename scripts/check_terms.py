@@ -81,7 +81,7 @@ def main() -> int:
         errors.append("full_program.json must contain 25 modules and 100 lessons")
     if len(labs) < 26:
         errors.append("labs.json must contain at least 26 labs")
-    required_lesson_blocks = {"learning_objectives", "what_is_known", "intuition", "visualization", "formal_explanation", "manual_example", "code_example", "interactive_lab", "independent_exercise", "misconceptions", "mini_test", "summary", "remediation", "spaced_repetition"}
+    required_lesson_blocks = {"learning_objectives", "what_is_known", "intuition", "visualization", "formal_explanation", "manual_example", "code_example", "interactive_lab", "independent_exercise", "misconceptions", "mini_test", "summary", "remediation", "spaced_repetition", "table", "formulas"}
     if len(lesson_content) != 100:
         errors.append("lesson_content.json must contain all 100 course lessons")
     program_ids = {str(lesson.get("id", "")).lstrip("0") for lesson in full_program.get("lessons", [])}
@@ -92,6 +92,8 @@ def main() -> int:
         missing = required_lesson_blocks - lesson.keys()
         if missing:
             errors.append(f"lesson content {lesson.get('lesson_id')} missing: {sorted(missing)}")
+        if not lesson.get("visualization", {}).get("graph"):
+            errors.append(f"lesson content {lesson.get('lesson_id')} missing visualization.graph")
     if errors:
         print("CONTENT LINT FAILED")
         print("\n".join(f"- {error}" for error in errors))
