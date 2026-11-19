@@ -16,6 +16,8 @@ const state = {
   lessonContent: new Map(),
   currentUser: null,
   completedLessons: [],
+  labRuns: [],
+  completedTests: [],
   mastery: {},
   nextReview: [],
   lab: { step: 0, running: false, timer: null, w: -3 },
@@ -56,6 +58,31 @@ function persist() {
   localStorage.setItem('ailab:progress', String(state.progress));
   localStorage.setItem('ailab:lesson', state.lessonId);
   localStorage.setItem('ailab:module', state.selectedModuleId);
+}
+
+function accountStateKey(prefix) {
+  return `${prefix}:${state.currentUser?.id || 'guest'}`;
+}
+
+function loadAccountAchievements() {
+  if (!state.currentUser) {
+    state.labRuns = [];
+    state.completedTests = [];
+    return;
+  }
+  try {
+    state.labRuns = JSON.parse(localStorage.getItem(accountStateKey('ailab:lab-runs')) || '[]');
+    state.completedTests = JSON.parse(localStorage.getItem(accountStateKey('ailab:completed-tests')) || '[]');
+  } catch {
+    state.labRuns = [];
+    state.completedTests = [];
+  }
+}
+
+function saveAccountAchievements() {
+  if (!state.currentUser) return;
+  localStorage.setItem(accountStateKey('ailab:lab-runs'), JSON.stringify(state.labRuns));
+  localStorage.setItem(accountStateKey('ailab:completed-tests'), JSON.stringify(state.completedTests));
 }
 
 function renderProgress() {
@@ -193,6 +220,7 @@ function applyUserState(user) {
     persist();
   }
   if (!user && (state.view === 'mentor' || state.view === 'admin')) setView('dashboard');
+  loadAccountAchievements();
   const name = user?.display_name || 'участник';
   const initials = user ? name.split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase() : 'AI';
   $('#workspace-name').textContent = user?.display_name || 'Демо-профиль';
@@ -273,8 +301,45 @@ function renderAchievements() {
   const completed = state.completedLessons || [];
   const achievements = [];
   if (completed.length) achievements.push(`<article class="achievement-card earned"><div class="achievement-symbol">✦</div><div><span class="achievement-label">ПЕРВЫЙ УРОК</span><h2>Первые шаги</h2><p>Завершено уроков: ${completed.length}.</p></div></article>`);
-  if (state.taskStats.correct > 0) achievements.push(`<article class="achievement-card earned"><div class="achievement-symbol cyan-symbol">✓</div><div><span class="achievement-label">ПЕРВАЯ ПРОВЕРКА</span><h2>Проверка понятий</h2><p>Правильных ответов: ${state.taskStats.correct}.</p></div></article>`);
-  list.innerHTML = achievements.length ? achievements.join('') : '<article class="panel empty-state">Достижения появятся после первого завершённого урока или ответа.</article>';
+  if (state.completedTests.length) achievements.push(`<article class="achievement-card earned"><div class="achievement-symbol cyan-symbol">✓</div><div><span class="achievement-label">ПРОВЕРКА ЗАВЕРШЕНА</span><h2>Проверка понятий</h2><p>Завершены тесты по урокам: ${state.completedTests.length}.</p></div></article>`);
+  if (state.labRuns.length) achievements.push(`<article class="achievement-card earned"><div class="achievement-symbol">⚗</div><div><span class="achievement-label">ПРАКТИКА ВЫПОЛНЕНА</span><h2>Лабораторный опыт</h2><p>Запущено связанных лабораторий: ${state.labRuns.length}.</p></div></article>`);
+  list.innerHTML = achievements.length ? achievements.join('') : '<article class="panel empty-state">Достижения появятся после завершённого теста или лаборатории.</article>';
+}
+
+function recordLabRun() {
+  if (!state.currentUser) return;
+  const lessonId = normalizeLessonId(state.lessonId);
+  if (!lessonId || state.labRuns.includes(lessonId)) return;
+  state.labRuns.push(lessonId);
+  saveAccountAchievements();
+  renderAchievements();
+  maybeCompleteLesson();
+}
+
+function recordTaskCompletion() {
+  if (!state.currentUser) return;
+  const lessonId = normalizeLessonId(state.lessonId);
+  if (!lessonId || state.completedTests.includes(lessonId)) return;
+  state.completedTests.push(lessonId);
+  saveAccountAchievements();
+  renderAchievements();
+  maybeCompleteLesson();
+}
+
+async function maybeCompleteLesson() {
+  if (!state.currentUser) return;
+  const lessonId = normalizeLessonId(state.lessonId);
+  if (!state.labRuns.includes(lessonId) || !state.completedTests.includes(lessonId) || state.completedLessons.includes(lessonId)) return;
+  const completed = [...new Set([...state.completedLessons, lessonId])];
+  try {
+    const saved = await fetchJson('/api/me/progress', {method: 'PUT', body: JSON.stringify({completed_lessons: completed, mastery: state.mastery, next_review: state.nextReview})});
+    state.completedLessons = saved.completed_lessons || completed;
+    state.progress = Math.round(state.completedLessons.length / Math.max(state.lessons.length || 100, 1) * 100);
+    renderProgress();
+    showToast('Урок завершён: лаборатория и тест пройдены', 'success');
+  } catch (error) {
+    showToast('Результаты сохранены локально. Повторите синхронизацию профиля.', 'info');
+  }
 }
 
 function showToast(message, type = 'info') {
@@ -904,6 +969,7 @@ function stepLab() {
 
 function startLab() {
   if (state.lab.running) return;
+  recordLabRun();
   state.lab.running = true;
   $('#lab-status').textContent = 'Лаборатория запущена';
   state.lab.timer = setInterval(stepLab, 360);
@@ -1017,12 +1083,11 @@ async function loadTaskForCurrentLesson() {
     const conceptual = bank.filter((item) => {
       if (String(item.id).startsWith('exam-')) return false;
       if (item.type !== 'single_choice') return false;
-      return !/(len\s*\(|2\s*[+*]\s*3|введите проценты|чему равна|какой расчёт нужно)/i.test(item.prompt || '');
+      return !/(len\s*\(|2\s*[+*]\s*3|2\s*[+*]\s*4|введите проценты|чему равна|какой расчёт нужно|какое правило относится|в лекции упоминалось|какое выражение упоминалось)/i.test(item.prompt || '');
     });
     const preferred = conceptual.find((item) => item.id === preferredId);
     const sameLesson = conceptual.filter((item) => normalizeLessonId(item.lesson_id) === normalized);
-    const rest = conceptual.filter((item) => item !== preferred && !sameLesson.includes(item));
-    state.taskSession = {questions: [preferred, ...sameLesson.filter((item) => item !== preferred), ...rest].filter(Boolean).slice(0, 20), index: 0, answered: new Set()};
+    state.taskSession = {questions: [preferred, ...sameLesson.filter((item) => item !== preferred)].filter(Boolean).slice(0, 20), index: 0, answered: new Set()};
     state.taskQuestion = state.taskSession.questions[0];
     renderCurrentTaskQuestion();
   } catch (error) {
@@ -1042,7 +1107,7 @@ function renderCurrentTaskQuestion() {
   $('#task-position').textContent = `Вопрос ${state.taskSession.index + 1} из ${state.taskSession.questions.length}`;
   $('#task-difficulty').textContent = question.difficulty || '● ● ○';
   $('#task-question-title').textContent = question.prompt || 'Проверьте понимание темы.';
-  $('#task-question-context').textContent = question.solution || 'Выберите ответ, затем разберите причину результата.';
+  $('#task-question-context').textContent = question.context || 'Выберите ответ, затем разберите причину результата.';
   list.innerHTML = options.map((option, index) => `<button class="answer" data-answer="${escapeHtml(option)}"><span class="answer-key">${String.fromCharCode(65 + index)}</span><span>${escapeHtml(option)}</span></button>`).join('');
   $('#question-feedback').textContent = '';
   $('#task-score').textContent = `${state.taskSession.answered.size} / ${state.taskSession.questions.length}`;
@@ -1167,6 +1232,7 @@ function checkAnswer() {
   renderAchievements();
   if (isCorrect) { feedback.className = 'question-feedback good'; feedback.textContent = state.taskQuestion?.solution || 'Верно. Разберите, почему этот ответ следует из лекции.'; showToast('Ответ принят · +10 XP', 'success'); }
   else { feedback.className = 'question-feedback bad'; feedback.textContent = state.taskQuestion?.solution ? `Пока нет. Подсказка: ${state.taskQuestion.solution}` : 'Пока нет. Вернитесь к лекции и повторите пример.'; }
+  if (firstAttempt && state.taskSession.answered.size === state.taskSession.questions.length) recordTaskCompletion();
   $('#task-score').textContent = `${state.taskSession.answered.size} / ${state.taskSession.questions.length}`;
   const next = $('[data-action="task-next"]');
   if (next) { next.hidden = state.taskSession.index >= state.taskSession.questions.length - 1; next.textContent = state.taskSession.index === state.taskSession.questions.length - 1 ? 'Тест завершён' : 'Следующий вопрос →'; }
@@ -1248,6 +1314,7 @@ async function loadMyProfile() {
     $('#profile-status').value = profile.status || 'learning';
     $('#profile-completion').value = profile.completion_percent ?? 0;
     $('#profile-publish').checked = Boolean(profile.publish_in_catalog);
+    $('#profile-visibility-scope').value = profile.visibility?.scope || 'owner';
     output.className = 'question-feedback good'; output.textContent = 'Профиль загружен из PostgreSQL.';
   } catch (error) { output.className = 'question-feedback bad'; output.textContent = error.message; }
 }
@@ -1256,6 +1323,7 @@ async function saveMyProfile() {
   const output = $('#profile-output');
   try {
     await fetchJson('/api/profile/me', {method: 'PUT', body: JSON.stringify({bio: $('#profile-bio').value, status: $('#profile-status').value, completion_percent: Number($('#profile-completion').value || 0), publish_in_catalog: $('#profile-publish').checked})});
+    await fetchJson('/api/profile/me/visibility', {method: 'PUT', body: JSON.stringify({scope: $('#profile-visibility-scope').value, show_projects: $('#profile-visibility-scope').value === 'catalog', show_certificates: $('#profile-visibility-scope').value === 'catalog'})});
     output.className = 'question-feedback good'; output.textContent = 'Профиль сохранён. Публикация появится после выполнения условий выпуска.';
     showToast('Профиль сохранён', 'success');
   } catch (error) { output.className = 'question-feedback bad'; output.textContent = error.message; }
@@ -1337,7 +1405,7 @@ function action(name, element = null) {
     'toggle-theme': () => { state.theme = state.theme === 'dark' ? 'light' : 'dark'; applyTheme(); drawLab(); showToast(state.theme === 'dark' ? 'Тёмная тема включена' : 'Светлая тема включена'); },
     'continue-learning': () => { closeModal(); openLesson(state.lessonId); },
     'lesson-lab': () => { setView('lab'); requestAnimationFrame(() => { const target = $('#lab-generic')?.hidden ? $('#gradient-canvas') : $('#lab-generic'); target?.scrollIntoView({behavior: 'smooth', block: 'center'}); }); },
-    'generic-lab-run': () => { updateGenericLab(); showToast('Опыт пересчитан', 'success'); },
+    'generic-lab-run': () => { updateGenericLab(); recordLabRun(); showToast('Опыт пересчитан', 'success'); },
     'visualization-tab': () => {
       const mode = element?.dataset.visualization || 'table';
       const visualization = element?.closest('.lesson-visualization');
@@ -1373,7 +1441,7 @@ function action(name, element = null) {
     'tutor': () => openModal('AI-тьютор · режим наводящих вопросов', '<p>Тьютор сначала просит вашу попытку, затем даёт подсказку и цитирует материалы курса. Готовое решение не раскрывается до попытки.</p><label class="range-label" for="tutor-question">Вопрос</label><textarea id="tutor-question" rows="3" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;color:var(--text);background:var(--surface-2)" placeholder="Например, почему градиент меняет знак?"></textarea><label class="range-label" for="tutor-attempt">Ваша попытка</label><textarea id="tutor-attempt" rows="3" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;color:var(--text);background:var(--surface-2)" placeholder="Что вы уже проверили?"></textarea><div id="tutor-output" class="question-feedback" role="status"></div>', '<button class="button button-ghost" data-action="go-lab">Открыть лабораторию</button><button class="button button-primary" data-action="tutor-submit">Спросить тьютора →</button>'),
     'tutor-submit': submitTutor,
     'show-all-activity': () => { const completed = state.completedLessons || []; const latest = completed.at(-1); const title = latest ? state.lessonContent.get(normalizeLessonId(latest))?.title || latest : ''; openModal('История активности', completed.length ? `<p>Завершено уроков: ${completed.length} из ${state.lessons.length || 100}.</p><p>Последний урок: «${escapeHtml(title)}».</p>` : '<p>История появится после первого завершённого урока.</p>'); },
-    'open-profile': () => { openModal('Профиль и сессия', '<p><strong>Ваш профиль</strong><br>Локальная траектория обучения</p><p>Для сохранения прогресса и доступа к ролевым панелям войдите или зарегистрируйтесь.</p><label class="range-label" for="auth-name">Имя</label><input id="auth-name" type="text" value="Участник AI Learning Lab" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;color:var(--text);background:var(--surface-2)"><label class="range-label" for="auth-email">Электронная почта</label><input id="auth-email" type="email" placeholder="you@example.com" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;color:var(--text);background:var(--surface-2)"><label class="range-label" for="auth-password">Пароль</label><input id="auth-password" type="password" placeholder="не менее 10 символов" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;color:var(--text);background:var(--surface-2)"><div id="auth-output" class="question-feedback" role="status"></div><div class="modal-code">Пароль должен содержать минимум 10 символов.</div><label class="range-label" for="profile-bio">О себе</label><textarea id="profile-bio" rows="2" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;color:var(--text);background:var(--surface-2)"></textarea><label class="range-label" for="profile-status">Статус</label><select id="profile-status" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;color:var(--text);background:var(--surface-2)"><option value="learning">обучается</option><option value="completed">курс завершён</option><option value="graduate">выпускник</option></select><label class="range-label" for="profile-completion">Завершение курса, %</label><input id="profile-completion" type="number" min="0" max="100" value="0" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;color:var(--text);background:var(--surface-2)"><label class="switch-row"><span><strong>Согласие на каталог выпускников</strong><small>Публикация доступна после экзамена и обязательных проектов</small></span><input id="profile-publish" type="checkbox"><i class="switch"></i></label><div id="profile-output" class="question-feedback" role="status"></div><label class="range-label" for="cohort-code">Код группы</label><input id="cohort-code" type="text" placeholder="AI-DEMO" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;color:var(--text);background:var(--surface-2)"><div id="cohort-output" class="question-feedback" role="status"></div>', '<button class="button button-ghost" data-action="auth-login">Войти</button><button class="button button-primary" data-action="auth-register">Зарегистрироваться</button><button class="button button-ghost" data-action="profile-load">Загрузить профиль</button><button class="button button-primary" data-action="profile-save">Сохранить профиль</button><button class="button button-ghost" data-action="join-cohort">Вступить в группу</button><button class="button button-danger" data-action="auth-logout">Выйти</button>'); $('#modal-content [data-action="auth-logout"]').hidden = !state.currentUser; },
+    'open-profile': () => { openModal('Профиль и сессия', '<p><strong>Ваш профиль</strong><br>Локальная траектория обучения</p><p>Для сохранения прогресса и доступа к ролевым панелям войдите или зарегистрируйтесь.</p><label class="range-label" for="auth-name">Имя</label><input id="auth-name" type="text" value="Участник AI Learning Lab" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;color:var(--text);background:var(--surface-2)"><label class="range-label" for="auth-email">Электронная почта</label><input id="auth-email" type="email" placeholder="you@example.com" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;color:var(--text);background:var(--surface-2)"><label class="range-label" for="auth-password">Пароль</label><input id="auth-password" type="password" placeholder="не менее 10 символов" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;color:var(--text);background:var(--surface-2)"><div id="auth-output" class="question-feedback" role="status"></div><div class="modal-code">Пароль должен содержать минимум 10 символов.</div><label class="range-label" for="profile-bio">О себе</label><textarea id="profile-bio" rows="2" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;color:var(--text);background:var(--surface-2)"></textarea><label class="range-label" for="profile-status">Статус</label><select id="profile-status" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;color:var(--text);background:var(--surface-2)"><option value="learning">обучается</option><option value="completed">курс завершён</option><option value="graduate">выпускник</option></select><label class="range-label" for="profile-completion">Завершение курса, %</label><input id="profile-completion" type="number" min="0" max="100" value="0" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;color:var(--text);background:var(--surface-2)"><label class="switch-row"><span><strong>Согласие на каталог выпускников</strong><small>Публикация доступна после экзамена и обязательных проектов</small></span><input id="profile-publish" type="checkbox"><i class="switch"></i></label><label class="range-label" for="profile-visibility-scope">Область публикации</label><select id="profile-visibility-scope" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;color:var(--text);background:var(--surface-2)"><option value="owner">Только мне</option><option value="catalog">Каталог выпускников после выпуска</option></select><div class="modal-code">Согласие действует только после завершения курса, экзамена и обязательных проектов. Его можно отозвать здесь в любой момент.</div><div id="profile-output" class="question-feedback" role="status"></div><label class="range-label" for="cohort-code">Код группы</label><input id="cohort-code" type="text" placeholder="AI-DEMO" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;color:var(--text);background:var(--surface-2)"><div id="cohort-output" class="question-feedback" role="status"></div>', '<button class="button button-ghost" data-action="auth-login">Войти</button><button class="button button-primary" data-action="auth-register">Зарегистрироваться</button><button class="button button-ghost" data-action="profile-load">Загрузить профиль</button><button class="button button-primary" data-action="profile-save">Сохранить профиль</button><button class="button button-ghost" data-action="join-cohort">Вступить в группу</button><button class="button button-danger" data-action="auth-logout">Выйти</button>'); $('#modal-content [data-action="auth-logout"]').hidden = !state.currentUser; },
     'auth-login': () => authRequest('login'),
     'auth-register': () => authRequest('register'),
     'auth-logout': logout,

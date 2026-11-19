@@ -152,7 +152,7 @@
       ],
       "lab": "data-cleaning",
       "exercise": "ex-002",
-      "assessment": "q-002",
+      "assessment": "q-006",
       "project": "p-001"
     },
     {
@@ -302,7 +302,7 @@
       ],
       "lab": "confusion-matrix",
       "exercise": "ex-012",
-      "assessment": "q-012",
+      "assessment": "q-010",
       "project": "p-001"
     },
     {
@@ -647,7 +647,7 @@
       ],
       "lab": "sandbox",
       "exercise": "ex-029",
-      "assessment": "q-029",
+      "assessment": "q-047",
       "project": "p-004"
     },
     {
