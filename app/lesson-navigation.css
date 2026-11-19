@@ -91,3 +91,6 @@ h1,h2,h3{font-family:Helvetica,Arial,Verdana,sans-serif}
 .lesson-code summary{cursor:pointer;color:var(--cyan);font-size:11px;font-weight:600}
 .lesson-code pre{overflow:auto;margin:10px 0 0;padding:13px;border-radius:9px;background:var(--surface-2);font:11px/1.5 "JetBrains Mono",monospace}
 @media (max-width:760px){.lesson-navigation{align-items:stretch;flex-direction:column}.lesson-navigation-current{order:-1}.lesson-navigation button{width:100%}.lesson-content-grid{grid-template-columns:1fr}}
+:where([hidden]){display:none!important}
+.dashboard-grid.guest-layout .next-panel{grid-column:1 / -1}
+.task-layout.single-column{grid-template-columns:minmax(0,1fr);max-width:1000px}

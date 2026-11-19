@@ -121,6 +121,9 @@ function applyRoleVisibility() {
   $$('[data-progress-only]').forEach((element) => { element.hidden = !state.currentUser || state.progress <= 0; });
   $$('[data-zero-progress]').forEach((element) => { element.hidden = state.progress > 0; });
   $$('[data-guest-only]').forEach((element) => { element.hidden = Boolean(state.currentUser); });
+  const dashboardGrid = $('#view-dashboard > .dashboard-grid');
+  dashboardGrid?.classList.toggle('guest-layout', !state.currentUser && state.progress <= 0);
+  $('#view-tasks .task-layout')?.classList.toggle('single-column', !state.currentUser || state.progress <= 0);
 }
 
 function renderDashboardDate() {
