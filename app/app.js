@@ -230,10 +230,11 @@ function renderLessonVisualization(content) {
   const alt = visualization.alt || 'Иллюстрация к теме урока';
   if (visualization.svg) return `<figure class="lesson-visual lesson-visual-svg" role="img" aria-label="${escapeHtml(alt)}">${visualization.svg}<figcaption>${escapeHtml(alt)}</figcaption></figure>`;
   const table = visualization.table || content.table;
+  let tableMarkup = '';
   if (table) {
     const headers = table.headers || table.columns || [];
     const rows = table.rows || [];
-    return `<figure class="lesson-visual lesson-visual-table"><table><caption>${escapeHtml(table.caption || alt)}</caption><thead><tr>${headers.map((header) => `<th scope="col">${escapeHtml(header)}</th>`).join('')}</tr></thead><tbody>${rows.map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join('')}</tr>`).join('')}</tbody></table></figure>`;
+    tableMarkup = `<figure class="lesson-visual lesson-visual-table"><table><caption>${escapeHtml(table.caption || alt)}</caption><thead><tr>${headers.map((header) => `<th scope="col">${escapeHtml(header)}</th>`).join('')}</tr></thead><tbody>${rows.map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join('')}</tr>`).join('')}</tbody></table></figure>`;
   }
   const graph = visualization.graph;
   if (graph?.type === 'network' || graph?.type === 'flow') {
@@ -249,7 +250,7 @@ function renderLessonVisualization(content) {
       const [x, y] = positions[index];
       return graph.type === 'flow' ? `<rect x="${x - 35}" y="${y - 18}" width="70" height="36" rx="8" fill="rgba(125,211,252,.12)" stroke="var(--cyan)"/><text x="${x}" y="${y + 5}" text-anchor="middle" fill="currentColor">${escapeHtml(node)}</text>` : `<circle cx="${x}" cy="${y}" r="24" fill="rgba(125,211,252,.12)" stroke="var(--cyan)"/><text x="${x}" y="${y + 5}" text-anchor="middle" fill="currentColor">${escapeHtml(node)}</text>`;
     }).join('');
-    return `<figure class="lesson-visual lesson-visual-chart"><svg viewBox="0 0 380 170" role="img" aria-label="${escapeHtml(alt)}">${lines}${shapes}</svg><figcaption>${escapeHtml(alt)}</figcaption></figure>`;
+    return `${tableMarkup}<figure class="lesson-visual lesson-visual-chart"><svg viewBox="0 0 380 170" role="img" aria-label="${escapeHtml(alt)}">${lines}${shapes}</svg><figcaption>${escapeHtml(alt)}</figcaption></figure>`;
   }
   const graphSeries = graph?.series || [];
   const points = visualization.points || (graphSeries.length ? graphSeries[0].values.map((value, index) => ({x: index + 1, y: Array.isArray(value) ? value[1] : value})) : null);
@@ -261,10 +262,10 @@ function renderLessonVisualization(content) {
       const minY = Math.min(...values.map((point) => point.y));
       const maxY = Math.max(...values.map((point) => point.y));
       const coordinates = values.map((point) => `${40 + ((point.x - minX) / (maxX - minX || 1)) * 300},${135 - ((point.y - minY) / (maxY - minY || 1)) * 100}`).join(' ');
-      return `<figure class="lesson-visual lesson-visual-chart"><svg viewBox="0 0 380 170" role="img" aria-label="${escapeHtml(alt)}"><path d="M40 20V135H350" fill="none" stroke="currentColor" stroke-opacity=".35"/><polyline points="${coordinates}" fill="none" stroke="var(--cyan)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg><figcaption>${escapeHtml(alt)}</figcaption></figure>`;
+      return `${tableMarkup}<figure class="lesson-visual lesson-visual-chart"><svg viewBox="0 0 380 170" role="img" aria-label="${escapeHtml(alt)}"><path d="M40 20V135H350" fill="none" stroke="currentColor" stroke-opacity=".35"/><polyline points="${coordinates}" fill="none" stroke="var(--cyan)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg><figcaption>${escapeHtml(alt)}</figcaption></figure>`;
     }
   }
-  return `<p class="lesson-visual-fallback">${escapeHtml(fallback)}</p>`;
+  return `${tableMarkup}<p class="lesson-visual-fallback">${escapeHtml(fallback)}</p>`;
 }
 
 function renderLessonFormula(content) {
