@@ -18,6 +18,10 @@
 .lesson-visual{margin:10px 0 14px;padding:12px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.025)}
 .lesson-visual figcaption{margin-top:8px;color:var(--text-muted);font-size:11px;line-height:1.45}
 .lesson-visual-svg svg,.lesson-visual-chart svg{display:block;width:100%;min-height:150px;color:var(--text-soft)}
+.lesson-visual-chart svg text{font-family:Verdana,Helvetica,Arial,sans-serif;font-size:10px;fill:currentColor}
+.lesson-visual-chart svg .chart-axis-label{font-size:11px;font-weight:700}
+.lesson-visual-chart figcaption{display:flex;flex-direction:column;gap:4px}
+.chart-legend{color:var(--text-muted);font-size:10px}
 .lesson-visual-table{overflow-x:auto}.lesson-visual-table table{width:100%;border-collapse:collapse;color:var(--text-soft);font-size:12px}.lesson-visual-table caption{text-align:left;color:var(--text-muted);padding-bottom:8px}.lesson-visual-table th,.lesson-visual-table td{padding:7px 9px;border-bottom:1px solid var(--line);text-align:left}.lesson-visual-table th{color:var(--text)}
 .lesson-visual-fallback{color:var(--text-soft);font-size:13px;line-height:1.6}
 .visualization-tabs{display:flex;gap:6px;margin:10px 0 4px}.visualization-tab{padding:7px 11px;border:1px solid var(--line);border-radius:8px;color:var(--text-muted);background:var(--surface-2);font-size:11px}.visualization-tab.active{border-color:var(--cyan);color:var(--text);background:rgba(125,211,252,.1)}.visualization-pane[hidden]{display:none!important}
@@ -54,6 +58,10 @@ h1,h2,h3{font-family:Helvetica,Arial,Verdana,sans-serif}
 .generic-result.bad{color:var(--amber);background:rgba(244,191,103,.08)}
 .generic-lab-footer{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:14px 20px;border-top:1px solid var(--line);color:var(--text-muted);font-size:10px}
 .project-workspace{margin-top:13px;padding:22px}
+.dashboard-grid.guest-layout .guest-course-overview{grid-column:1 / -1}
+.metric-card .metric-label{font-size:12px}
+.metric-card .metric-note,.metric-card .metric-copy span{font-size:12px}
+.metric-card .metric-value{font-size:29px}
 .project-workspace[hidden]{display:none}
 .project-workspace h2{margin:4px 0 8px;font-size:21px}
 .project-workspace p,.project-workspace li{color:var(--text-soft);font-size:11px}

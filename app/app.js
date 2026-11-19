@@ -139,6 +139,8 @@ function applyRoleVisibility() {
   $$('[data-guest-only]').forEach((element) => { element.hidden = Boolean(state.currentUser); });
   const dashboardGrid = $('#view-dashboard > .dashboard-grid');
   dashboardGrid?.classList.toggle('guest-layout', !state.currentUser && state.progress <= 0);
+  const lowerGrid = $('#view-dashboard > .lower-grid');
+  lowerGrid?.classList.toggle('guest-layout', !state.currentUser && state.progress <= 0);
   $('#view-tasks .task-layout')?.classList.toggle('single-column', !state.currentUser || state.progress <= 0);
 }
 
@@ -310,20 +312,59 @@ function renderLessonVisualization(content) {
     return wrapVisuals(tableMarkup, `<figure class="lesson-visual lesson-visual-chart"><svg viewBox="0 0 380 170" role="img" aria-label="${escapeHtml(alt)}">${lines}${shapes}</svg><figcaption>${escapeHtml(alt)}</figcaption></figure>`);
   }
   const graphSeries = graph?.series || [];
-  const points = visualization.points || (graphSeries.length ? graphSeries[0].values.map((value, index) => ({x: Array.isArray(value) ? value[0] : index + 1, y: Array.isArray(value) ? value[1] : value})) : null);
-  if (Array.isArray(points) && points.length > 1) {
-    const values = points.map((point) => ({x: Number(point.x), y: Number(point.y)})).filter((point) => Number.isFinite(point.x) && Number.isFinite(point.y));
-    if (values.length > 1) {
-      const minX = Math.min(...values.map((point) => point.x));
-      const maxX = Math.max(...values.map((point) => point.x));
-      const minY = Math.min(...values.map((point) => point.y));
-      const maxY = Math.max(...values.map((point) => point.y));
-      const coordinates = values.map((point) => `${40 + ((point.x - minX) / (maxX - minX || 1)) * 300},${135 - ((point.y - minY) / (maxY - minY || 1)) * 100}`).join(' ');
-      const xLabel = graph?.x_label || 'шаг';
-      const yLabel = graph?.y_label || 'значение';
-      const graphMarkup = `<figure class="lesson-visual lesson-visual-chart"><svg viewBox="0 0 380 190" role="img" aria-label="${escapeHtml(alt)}"><path d="M45 25V145H350" fill="none" stroke="currentColor" stroke-opacity=".35"/><polyline points="${coordinates}" fill="none" stroke="var(--cyan)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><text x="195" y="178" text-anchor="middle" fill="currentColor">${escapeHtml(xLabel)}</text><text x="14" y="88" text-anchor="middle" transform="rotate(-90 14 88)" fill="currentColor">${escapeHtml(yLabel)}</text></svg><figcaption>${escapeHtml(alt)}</figcaption></figure>`;
-      return wrapVisuals(tableMarkup, graphMarkup);
-    }
+  const seriesData = graphSeries.map((series, seriesIndex) => ({
+    name: series.name || `Серия ${seriesIndex + 1}`,
+    values: (series.values || []).map((value, index) => ({x: Number(Array.isArray(value) ? value[0] : index + 1), y: Number(Array.isArray(value) ? value[1] : value)})).filter((point) => Number.isFinite(point.x) && Number.isFinite(point.y))
+  })).filter((series) => series.values.length > 1);
+  if (!seriesData.length && Array.isArray(visualization.points)) {
+    seriesData.push({name: 'Данные', values: visualization.points.map((point, index) => ({x: Number(point.x ?? index + 1), y: Number(point.y)})).filter((point) => Number.isFinite(point.x) && Number.isFinite(point.y))});
+  }
+  const allValues = seriesData.flatMap((series) => series.values);
+  if (allValues.length > 1) {
+    const minX = Math.min(...allValues.map((point) => point.x));
+    const maxX = Math.max(...allValues.map((point) => point.x));
+    const minValue = Math.min(...allValues.map((point) => point.y));
+    const maxValue = Math.max(...allValues.map((point) => point.y));
+    const valueSpan = maxValue - minValue || Math.max(1, Math.abs(maxValue) * .2);
+    const minY = graph?.type === 'bar' ? Math.min(0, minValue) : minValue - valueSpan * .1;
+    const maxY = graph?.type === 'bar' ? Math.max(0, maxValue) : maxValue + valueSpan * .1;
+    const plot = {left: 52, right: 400, top: 28, bottom: 172};
+    const mapX = (value) => plot.left + ((value - minX) / (maxX - minX || 1)) * (plot.right - plot.left);
+    const mapY = (value) => plot.bottom - ((value - minY) / (maxY - minY || 1)) * (plot.bottom - plot.top);
+    const formatTick = (value) => Number.isInteger(value) ? String(value) : Number(value).toFixed(Math.abs(value) < 1 ? 2 : 1).replace('.', ',');
+    const grid = [0, .5, 1].map((ratio) => {
+      const y = plot.bottom - ratio * (plot.bottom - plot.top);
+      const value = minY + ratio * (maxY - minY);
+      return `<line x1="${plot.left}" y1="${y}" x2="${plot.right}" y2="${y}" stroke="currentColor" stroke-opacity=".14" stroke-dasharray="3 4"/><text x="${plot.left - 8}" y="${y + 4}" text-anchor="end">${escapeHtml(formatTick(value))}</text>`;
+    }).join('');
+    const axis = `<path d="M${plot.left} ${plot.top}V${plot.bottom}H${plot.right}" fill="none" stroke="currentColor" stroke-opacity=".55"/><text x="${plot.left}" y="${plot.bottom + 20}" text-anchor="middle">${escapeHtml(formatTick(minX))}</text><text x="${plot.right}" y="${plot.bottom + 20}" text-anchor="middle">${escapeHtml(formatTick(maxX))}</text>`;
+    const palette = ['var(--cyan)', 'var(--violet)', 'var(--green)', 'var(--amber)'];
+    let marks = '';
+    seriesData.forEach((series, seriesIndex) => {
+      const color = palette[seriesIndex % palette.length];
+      if (graph?.type === 'bar') {
+        const width = Math.max(12, Math.min(42, (plot.right - plot.left) / (series.values.length * Math.max(1, seriesData.length)) * .68));
+        const groupWidth = (plot.right - plot.left) / Math.max(1, series.values.length);
+        marks += series.values.map((point, index) => {
+          const x = plot.left + groupWidth * index + groupWidth / 2 + (seriesIndex - (seriesData.length - 1) / 2) * width;
+          const zero = mapY(0);
+          const y = mapY(point.y);
+          const top = Math.min(zero, y);
+          const height = Math.max(2, Math.abs(zero - y));
+          return `<rect x="${x - width / 2}" y="${top}" width="${width}" height="${height}" rx="3" fill="${color}" fill-opacity=".82"><title>${escapeHtml(series.name)} · ${escapeHtml(formatTick(point.y))}</title></rect>`;
+        }).join('');
+      } else if (graph?.type === 'scatter') {
+        marks += series.values.map((point) => `<circle cx="${mapX(point.x)}" cy="${mapY(point.y)}" r="5" fill="${color}" stroke="var(--surface)" stroke-width="2"><title>${escapeHtml(series.name)} · (${escapeHtml(formatTick(point.x))}; ${escapeHtml(formatTick(point.y))})</title></circle>`).join('');
+      } else {
+        const coordinates = series.values.map((point) => `${mapX(point.x)},${mapY(point.y)}`).join(' ');
+        marks += `<polyline points="${coordinates}" fill="none" stroke="${color}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>${series.values.map((point) => `<circle cx="${mapX(point.x)}" cy="${mapY(point.y)}" r="4" fill="${color}" stroke="var(--surface)" stroke-width="2"><title>${escapeHtml(series.name)} · ${escapeHtml(formatTick(point.y))}</title></circle>`).join('')}`;
+      }
+    });
+    const legend = seriesData.map((series, index) => `<span style="color:${palette[index % palette.length]}">${escapeHtml(series.name)}</span>`).join(' · ');
+    const xLabel = graph?.x_label || 'шаг';
+    const yLabel = graph?.y_label || 'значение';
+    const graphMarkup = `<figure class="lesson-visual lesson-visual-chart"><svg viewBox="0 0 440 245" role="img" aria-label="${escapeHtml(alt)}"><g class="chart-grid">${grid}</g>${axis}${marks}<text x="226" y="225" text-anchor="middle" class="chart-axis-label">${escapeHtml(xLabel)}</text><text x="14" y="105" text-anchor="middle" transform="rotate(-90 14 105)" class="chart-axis-label">${escapeHtml(yLabel)}</text></svg><figcaption>${escapeHtml(alt)}<span class="chart-legend">${legend}</span></figcaption></figure>`;
+    return wrapVisuals(tableMarkup, graphMarkup);
   }
   return tableMarkup || `<p class="lesson-visual-fallback">${escapeHtml(fallback)}</p>`;
 }
