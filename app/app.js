@@ -6,13 +6,16 @@ const state = {
   view: savedRoute?.view || localStorage.getItem('ailab:view') || 'dashboard',
   theme: localStorage.getItem('ailab:theme') || 'dark',
   fontSize: Number.isFinite(savedFontSize) ? Math.max(17, savedFontSize) : 17,
-  progress: Number(localStorage.getItem('ailab:progress') || 0),
+  progress: localStorage.getItem('ailab:token') ? Number(localStorage.getItem('ailab:progress') || 0) : 0,
   lessonId: savedRoute?.lessonId || localStorage.getItem('ailab:lesson') || '1.01',
   lessons: [],
   modules: [],
   selectedModuleId: localStorage.getItem('ailab:module') || '',
   lessonContent: new Map(),
   currentUser: null,
+  completedLessons: [],
+  mastery: {},
+  nextReview: [],
   lab: { step: 0, running: false, timer: null, w: -3 },
   selectedAnswer: null,
   selectedTerm: null,
@@ -64,6 +67,7 @@ function renderProgress() {
   if (count) count.textContent = `${Math.round(progress * 36 / 100)} из 36`;
   renderNotificationState();
   renderPathState();
+  renderDashboardData();
 }
 
 function renderNotificationState() {
@@ -153,6 +157,14 @@ function renderDashboardDate() {
 
 function applyUserState(user) {
   state.currentUser = user || null;
+  if (!user) {
+    state.progress = 0;
+    state.completedLessons = [];
+    state.mastery = {};
+    state.nextReview = [];
+    state.lessonId = '1.01';
+    persist();
+  }
   if (!user && (state.view === 'mentor' || state.view === 'admin')) setView('dashboard');
   const name = user?.display_name || 'участник';
   const initials = user ? name.split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase() : 'AI';
@@ -178,6 +190,54 @@ function renderDashboardLesson() {
   $('#dashboard-lesson-title').textContent = title;
   $('#dashboard-lesson-description').textContent = content.why_it_matters || lesson.description || 'Начните с первого урока курса и двигайтесь по графу связей.';
   $('#dashboard-lesson-meta').textContent = `◷ ${content.duration_minutes || lesson.duration_minutes || 35} мин · ◌ Лекция и практика`;
+}
+
+function renderDashboardData() {
+  const completed = state.completedLessons || [];
+  const completedSet = new Set(completed.map(normalizeLessonId));
+  const hasProgress = Boolean(state.currentUser && completed.length);
+  const masteryPanel = $('#dashboard-mastery-panel');
+  if (masteryPanel) masteryPanel.hidden = !hasProgress || !Object.keys(state.mastery || {}).length;
+  const masteryLabels = {python: 'Python и данные', math: 'Математика', classic_ml: 'Классическое ML', deep_learning: 'Нейронные сети'};
+  const masteryList = $('#dashboard-mastery-list');
+  if (masteryList) {
+    const entries = Object.entries(state.mastery || {}).filter(([key, value]) => masteryLabels[key] && Number.isFinite(Number(value)));
+    masteryList.innerHTML = entries.length ? entries.map(([key, value], index) => `<div class="mastery-row"><div class="mastery-name"><span class="mastery-icon ${['cyan', 'violet', 'amber', 'indigo'][index % 4]}">${['λ', '∑', '◇', '✦'][index % 4]}</span><div><strong>${masteryLabels[key]}</strong><span>по сохранённым проверкам</span></div></div><div class="mastery-track"><span style="width:${Math.max(0, Math.min(100, Number(value)))}%"></span></div><span class="mastery-score">${Math.round(Number(value))}%</span></div>`).join('') : '<div class="empty-state">Показатели появятся после сохранённой проверки.</div>';
+  }
+  const durations = completed.reduce((total, id) => {
+    const lesson = state.lessons.find((item) => normalizeLessonId(item.id) === normalizeLessonId(id));
+    const content = state.lessonContent.get(normalizeLessonId(id));
+    return total + Number(content?.duration_minutes || lesson?.duration_minutes || 0);
+  }, 0);
+  const timeValue = $('#dashboard-time');
+  const timeNote = $('#dashboard-time-note');
+  if (timeValue) timeValue.textContent = durations ? `${Math.floor(durations / 60)} ч ${durations % 60} мин` : '—';
+  if (timeNote) timeNote.textContent = durations ? 'по завершённым урокам' : 'После первого завершённого урока';
+  const masteryValue = $('#dashboard-mastery');
+  const masteryNote = $('#dashboard-mastery-note');
+  if (masteryValue) masteryValue.innerHTML = hasProgress ? `${Math.round(state.progress)}<span>/100</span>` : '—';
+  if (masteryNote) masteryNote.textContent = hasProgress ? 'по завершённым урокам' : 'После первого результата';
+  const reviewCard = $('#dashboard-review-card');
+  if (reviewCard) reviewCard.hidden = !hasProgress || !(state.nextReview || []).length;
+  if ((state.nextReview || []).length) {
+    const topic = $('#dashboard-review-topic');
+    const reviewCount = $('#dashboard-review-count');
+    const reviewMeta = $('#dashboard-review-meta');
+    if (topic) topic.textContent = state.nextReview[0];
+    if (reviewCount) reviewCount.textContent = `${state.nextReview.length} ${state.nextReview.length === 1 ? 'тема' : 'темы'}`;
+    if (reviewMeta) reviewMeta.textContent = 'сохранено в профиле';
+  }
+  const activityPanel = $('#dashboard-activity-panel');
+  const activityList = $('#dashboard-activity-list');
+  if (activityPanel) activityPanel.hidden = !hasProgress;
+  if (activityList) activityList.innerHTML = hasProgress ? `<div class="activity-item"><span class="activity-icon success">✓</span><div><strong>Завершено уроков</strong><span>${completed.length} из ${state.lessons.length || 100}</span></div><span class="activity-tag">прогресс</span></div>` : '<div class="empty-state">После первого завершённого урока здесь появится история.</div>';
+  const milestonesPanel = $('#dashboard-milestones-panel');
+  const milestonesList = $('#dashboard-milestones-list');
+  if (milestonesPanel) milestonesPanel.hidden = !hasProgress;
+  if (milestonesList) {
+    const nextLesson = state.lessons.find((lesson) => !completedSet.has(normalizeLessonId(lesson.id)));
+    milestonesList.innerHTML = hasProgress ? `<div class="milestone"><div class="milestone-icon">01</div><div><strong>Продолжить обучение</strong><span>${nextLesson ? `Следующий урок · ${escapeHtml(state.lessonContent.get(nextLesson.id)?.title || nextLesson.title)}` : 'Все уроки курса завершены'}</span></div><div class="milestone-progress"><strong>${Math.round(state.progress)}%</strong><span style="width:${Math.round(state.progress)}%"></span></div></div>` : '<div class="empty-state">Вехи появятся после первого завершённого урока.</div>';
+  }
 }
 
 function showToast(message, type = 'info') {
@@ -614,6 +674,7 @@ async function loadLessons() {
     state.lessonId = normalizeLessonId(state.lessonId);
     if (!state.lessons.some((lesson) => lesson.id === state.lessonId)) state.lessonId = state.lessons[0].id;
     renderLesson();
+    renderProgress();
     if (routeHistoryInitialized) syncRouteHistory('replace');
   } catch (error) {
     try {
@@ -623,6 +684,7 @@ async function loadLessons() {
       (content.lessons || []).forEach((lesson) => state.lessonContent.set(normalizeLessonId(lesson.lesson_id), lesson));
       if (!state.lessons.some((lesson) => lesson.id === state.lessonId)) state.lessonId = state.lessons[0].id;
       renderLesson();
+      renderProgress();
       if (routeHistoryInitialized) syncRouteHistory('replace');
     } catch (fallbackError) {
       console.info('Локальный каталог уроков использует встроенную копию', fallbackError);
@@ -637,12 +699,19 @@ async function loadCurrentUser() {
     const user = await fetchJson('/api/auth/me');
     applyUserState(user);
     const profile = await fetchJson('/api/profile/me').catch(() => null);
+    const progress = await fetchJson('/api/me/progress').catch(() => null);
+    if (progress) {
+      state.completedLessons = progress.completed_lessons || [];
+      state.mastery = progress.mastery || {};
+      state.nextReview = progress.next_review || [];
+    }
     if (profile) {
       state.progress = Number(profile.completion_percent || 0);
       renderProgress();
       applyRoleVisibility();
       if (profile.completed_lessons?.length) state.lessonId = normalizeLessonId(profile.completed_lessons.at(-1));
     }
+    renderProgress();
     renderDashboardLesson();
   } catch (error) {
     localStorage.removeItem('ailab:token');
@@ -1057,7 +1126,7 @@ async function runCode() {
 }
 
 function exportProgress() {
-  const payload = {version: 1, exportedAt: new Date().toISOString(), view: state.view, theme: state.theme, progress: state.progress, completed: ['1.01','1.02','1.03'], nextReview: ['Функция потерь','Градиент']};
+  const payload = {version: 1, exportedAt: new Date().toISOString(), view: state.view, theme: state.theme, progress: state.progress, completed: state.completedLessons || [], mastery: state.mastery || {}, nextReview: state.nextReview || []};
   const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
   const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'ai-learning-lab-progress.json'; a.click(); URL.revokeObjectURL(url); showToast('Прогресс экспортирован', 'success');
 }
@@ -1132,7 +1201,7 @@ function action(name, element = null) {
     'new-project': () => openModal('Новый проект', '<p>Выберите основу для портфолио. Сейчас доступны 6 сквозных сценариев, которые открываются по графу связей курса.</p><div class="modal-actions"><button class="button button-primary" data-action="start-project">Предсказатель стоимости →</button></div>'),
     'tutor': () => openModal('AI-тьютор · режим наводящих вопросов', '<p>Тьютор сначала просит вашу попытку, затем даёт подсказку и цитирует материалы курса. Готовое решение не раскрывается до попытки.</p><label class="range-label" for="tutor-question">Вопрос</label><textarea id="tutor-question" rows="3" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;color:var(--text);background:var(--surface-2)" placeholder="Например, почему градиент меняет знак?"></textarea><label class="range-label" for="tutor-attempt">Ваша попытка</label><textarea id="tutor-attempt" rows="3" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;color:var(--text);background:var(--surface-2)" placeholder="Что вы уже проверили?"></textarea><div id="tutor-output" class="question-feedback" role="status"></div>', '<button class="button button-ghost" data-action="go-lab">Открыть лабораторию</button><button class="button button-primary" data-action="tutor-submit">Спросить тьютора →</button>'),
     'tutor-submit': submitTutor,
-    'show-all-activity': () => openModal('История активности', '<p>Сегодня · 18:42 · урок «Среднее и медиана» · +24 XP</p><p>Сегодня · 17:15 · лаборатория «Линейная регрессия» · 86%</p><p>Вчера · 21:03 · достижение «Первый график» · +50 XP</p>'),
+    'show-all-activity': () => { const completed = state.completedLessons || []; const latest = completed.at(-1); const title = latest ? state.lessonContent.get(normalizeLessonId(latest))?.title || latest : ''; openModal('История активности', completed.length ? `<p>Завершено уроков: ${completed.length} из ${state.lessons.length || 100}.</p><p>Последний урок: «${escapeHtml(title)}».</p>` : '<p>История появится после первого завершённого урока.</p>'); },
     'open-profile': () => { openModal('Профиль и сессия', '<p><strong>Ваш профиль</strong><br>Локальная траектория обучения</p><p>Для сохранения прогресса и доступа к ролевым панелям войдите или зарегистрируйтесь.</p><label class="range-label" for="auth-name">Имя</label><input id="auth-name" type="text" value="Участник AI Learning Lab" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;color:var(--text);background:var(--surface-2)"><label class="range-label" for="auth-email">Электронная почта</label><input id="auth-email" type="email" placeholder="you@example.com" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;color:var(--text);background:var(--surface-2)"><label class="range-label" for="auth-password">Пароль</label><input id="auth-password" type="password" placeholder="не менее 10 символов" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;color:var(--text);background:var(--surface-2)"><div id="auth-output" class="question-feedback" role="status"></div><div class="modal-code">Пароль должен содержать минимум 10 символов.</div><label class="range-label" for="profile-bio">О себе</label><textarea id="profile-bio" rows="2" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;color:var(--text);background:var(--surface-2)"></textarea><label class="range-label" for="profile-status">Статус</label><select id="profile-status" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;color:var(--text);background:var(--surface-2)"><option value="learning">обучается</option><option value="completed">курс завершён</option><option value="graduate">выпускник</option></select><label class="range-label" for="profile-completion">Завершение курса, %</label><input id="profile-completion" type="number" min="0" max="100" value="0" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;color:var(--text);background:var(--surface-2)"><label class="switch-row"><span><strong>Согласие на каталог выпускников</strong><small>Публикация доступна после экзамена и обязательных проектов</small></span><input id="profile-publish" type="checkbox"><i class="switch"></i></label><div id="profile-output" class="question-feedback" role="status"></div><label class="range-label" for="cohort-code">Код группы</label><input id="cohort-code" type="text" placeholder="AI-DEMO" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;color:var(--text);background:var(--surface-2)"><div id="cohort-output" class="question-feedback" role="status"></div>', '<button class="button button-ghost" data-action="auth-login">Войти</button><button class="button button-primary" data-action="auth-register">Зарегистрироваться</button><button class="button button-ghost" data-action="profile-load">Загрузить профиль</button><button class="button button-primary" data-action="profile-save">Сохранить профиль</button><button class="button button-ghost" data-action="join-cohort">Вступить в группу</button><button class="button button-danger" data-action="auth-logout">Выйти</button>'); $('#modal-content [data-action="auth-logout"]').hidden = !state.currentUser; },
     'auth-login': () => authRequest('login'),
     'auth-register': () => authRequest('register'),

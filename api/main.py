@@ -45,13 +45,7 @@ class ProgressPayload(BaseModel):
     next_review: list[str] = Field(default_factory=list)
 
 
-progress_store: dict[str, ProgressPayload] = {
-    "demo": ProgressPayload(
-        completed_lessons=["1.01", "1.02", "1.03"],
-        mastery={"python": 78, "math": 64, "classic_ml": 42, "deep_learning": 28},
-        next_review=["Функция потерь", "Градиент"],
-    )
-}
+progress_store: dict[str, ProgressPayload] = {"demo": ProgressPayload()}
 
 
 def curriculum_lesson_ids() -> set[str]:
