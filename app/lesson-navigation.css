@@ -16,6 +16,8 @@
 .lesson-lecture-grid ul{margin:7px 0 0;padding-left:20px}
 .lesson-content-footer{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:20px;padding-top:14px;border-top:1px solid var(--line);color:var(--text-muted);font-size:10px}
 .lesson-content-footer .text-button{margin-left:auto}
+.lesson-related-links{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:18px;padding:13px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);color:var(--text-muted);font-size:10px}
+.lesson-related-links .text-button{font-size:11px;text-align:left}
 @media(max-width:760px){.lesson-lecture-grid{grid-template-columns:1fr}.lesson-content-footer .text-button{margin-left:0}}
 .lesson-content{margin-bottom:13px}
 body{font-family:Verdana,Helvetica,Arial,sans-serif;font-size:var(--base-font-size,15px);line-height:1.5}
