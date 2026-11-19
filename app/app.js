@@ -91,6 +91,7 @@ function renderDashboardDate() {
 
 function applyUserState(user) {
   state.currentUser = user || null;
+  if (!user && (state.view === 'mentor' || state.view === 'admin')) setView('dashboard');
   const name = user?.display_name || 'участник';
   const initials = user ? name.split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase() : 'AI';
   $('#workspace-name').textContent = user?.display_name || 'Демо-профиль';
