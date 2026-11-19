@@ -191,7 +191,7 @@ function showToast(message, type = 'info') {
 
 function applyTheme() {
   document.documentElement.dataset.theme = state.theme;
-  $$('.segmented button').forEach((button) => button.classList.toggle('selected', button.dataset.themeChoice === state.theme));
+  $$('.segmented button').forEach((button) => { const selected = button.dataset.themeChoice === state.theme; button.classList.toggle('selected', selected); button.setAttribute('aria-pressed', String(selected)); });
   persist();
 }
 
