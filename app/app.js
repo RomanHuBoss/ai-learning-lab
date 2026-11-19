@@ -1,6 +1,7 @@
 const state = {
   view: localStorage.getItem('ailab:view') || 'dashboard',
   theme: localStorage.getItem('ailab:theme') || 'dark',
+  fontSize: Number(localStorage.getItem('ailab:font-size') || 15),
   progress: Number(localStorage.getItem('ailab:progress') || 0),
   lessonId: localStorage.getItem('ailab:lesson') || '1.01',
   lessons: [],
@@ -9,6 +10,7 @@ const state = {
   lab: { step: 0, running: false, timer: null, w: -3 },
   selectedAnswer: null,
   selectedTerm: null,
+  taskQuestion: null,
   exam: {attemptId: null, questions: []},
   tooltips: new Map()
 };
@@ -33,6 +35,7 @@ const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (character
 function persist() {
   localStorage.setItem('ailab:view', state.view);
   localStorage.setItem('ailab:theme', state.theme);
+  localStorage.setItem('ailab:font-size', String(state.fontSize));
   localStorage.setItem('ailab:progress', String(state.progress));
   localStorage.setItem('ailab:lesson', state.lessonId);
 }
@@ -133,6 +136,17 @@ function applyTheme() {
   persist();
 }
 
+function applyTypography() {
+  const size = Math.max(14, Math.min(19, Number(state.fontSize) || 15));
+  state.fontSize = size;
+  document.documentElement.style.setProperty('--base-font-size', `${size}px`);
+  const input = $('#font-size');
+  const output = $('#font-size-output');
+  if (input) input.value = String(size);
+  if (output) output.textContent = `${size} px`;
+  persist();
+}
+
 function setView(view) {
   if (view === 'mentor' && !['mentor', 'instructor', 'admin'].includes(state.currentUser?.role)) view = 'dashboard';
   if (view === 'admin' && state.currentUser?.role !== 'admin') view = 'dashboard';
@@ -150,6 +164,7 @@ function setView(view) {
   if (view === 'mentor') loadMentorDashboard();
   if (view === 'admin') loadAdminDashboard();
   if (view === 'exam') loadExams();
+  if (view === 'tasks') loadTaskForCurrentLesson();
   window.scrollTo({top: 0, behavior: document.documentElement.classList.contains('reduced-motion') ? 'auto' : 'smooth'});
 }
 
@@ -202,6 +217,89 @@ function renderLesson() {
   $('#lesson-content').innerHTML = `<div class="lesson-content-header"><div><span class="panel-kicker">ЛЕКЦИЯ · УРОК ${escapeHtml(lesson.id)}</span><h2>${escapeHtml(title)}</h2></div><span class="lesson-duration">${content.duration_minutes || lesson.duration_minutes || '—'} мин</span></div><div class="lesson-content-actions"><button class="button button-primary" data-action="lesson-lab">Открыть лабораторию ↓</button><button class="button button-ghost" data-action="lesson-tasks">Перейти к проверке →</button></div><div class="lesson-lecture-grid"><div><h3>Что уже известно</h3><ul>${list(known, ['Базовые понятия предыдущих уроков'])}</ul><h3>Цели урока</h3><ul>${list(objectives, ['Понять основную идею темы', 'Применить её в практике'])}</ul><h3>Интуиция</h3><p>${escapeHtml(content.intuition || 'Сначала сформулируйте идею своими словами, затем проверьте её на маленьком примере.')}</p><h3>Визуализация</h3><p>${escapeHtml(visualization)}</p><h3>Формальное объяснение</h3><p>${escapeHtml(content.formal_explanation || 'Свяжите обозначения, входы, выходы и ограничение метода.')}</p></div><div><h3>Почему это важно</h3><p>${escapeHtml(content.why_it_matters || 'Эта тема связывает фундаментальные понятия с рабочими ML/AI-сценариями.')}</p><h3>Ручной пример</h3><p>${escapeHtml(content.manual_example || 'Решите небольшой пример вручную и проверьте численный результат.')}</p><h3>Типичные заблуждения</h3><ul>${list(misconceptions, ['Не подменяйте интуицию формальным условием.', 'Проверяйте результат на новых данных.'])}</ul><h3>Мини-тест</h3><p>Идентификатор проверки <strong>${escapeHtml(content.mini_test || lesson.assessment || 'после лекции')}</strong>. После ответа разберите причину ошибки.</p><h3>Если ответ неверен</h3><p>${escapeHtml(remediation)}</p><h3>Короткое резюме</h3><ul>${list(summary, ['Повторите ключевую идею', 'Сделайте практическое упражнение'])}</ul></div></div>${content.code_example ? `<details class="lesson-code"><summary>Пример кода</summary><pre><code>${escapeHtml(content.code_example)}</code></pre></details>` : ''}<div class="lesson-content-footer"><span>Лаборатория <strong>${escapeHtml(content.interactive_lab || lesson.lab || 'практика')}</strong></span><span>Упражнение <strong>${escapeHtml(content.independent_exercise || lesson.exercise_id || 'практика')}</strong></span><button class="text-button" data-action="lesson-exam">Открыть экзамен →</button></div>`;
   persist();
   renderPathState();
+  renderInteractiveLab(content, lesson);
+}
+
+function labKind(content, lesson) {
+  const value = content.interactive_lab || '';
+  if (value) return value;
+  const title = `${lesson.title || ''} ${lesson.description || ''}`.toLowerCase();
+  if (title.includes('граф') || title.includes('функц')) return 'function-plot';
+  if (title.includes('врем')) return 'time-series-split';
+  if (title.includes('граф')) return 'graph-playground';
+  return 'guided-practice';
+}
+
+function renderInteractiveLab(content, lesson) {
+  const layout = $('#lab-layout');
+  const generic = $('#lab-generic');
+  if (!layout || !generic) return;
+  const kind = labKind(content, lesson);
+  if (kind === 'gradient-descent') {
+    layout.hidden = false;
+    generic.hidden = true;
+    return;
+  }
+  layout.hidden = true;
+  generic.hidden = false;
+  generic.dataset.labKind = kind;
+  const title = content.title || lesson.title || 'Практическая лаборатория';
+  const description = content.why_it_matters || lesson.description || 'Проверьте идею на небольшом интерактивном примере.';
+  const visual = {
+    'variable-playground': '<table><thead><tr><th>Имя</th><th>Значение</th><th>Тип</th></tr></thead><tbody><tr><td>x</td><td id="generic-x-value">3</td><td>int</td></tr><tr><td>name</td><td>AI Lab</td><td>str</td></tr><tr><td>enabled</td><td>True</td><td>bool</td></tr></tbody></table>',
+    'data-cleaning': '<table><thead><tr><th>row</th><th>value</th><th>status</th></tr></thead><tbody><tr><td>1</td><td>12.4</td><td>ok</td></tr><tr><td>2</td><td>—</td><td>missing</td></tr><tr><td>3</td><td>999.0</td><td>outlier</td></tr></tbody></table>',
+    'tensor-shapes': '<svg viewBox="0 0 520 220" role="img" aria-label="Схема формы тензора"><rect x="60" y="45" width="150" height="110" rx="12" fill="rgba(125,211,252,.16)" stroke="#7dd3fc"/><rect x="250" y="72" width="150" height="56" rx="12" fill="rgba(167,139,250,.16)" stroke="#a78bfa"/><path d="M210 100h40" stroke="#67e8a5" stroke-width="4"/><text x="88" y="105" fill="currentColor">batch × channels × H × W</text><text x="277" y="105" fill="currentColor">2 × 3 × 28 × 28</text></svg>',
+    'graph-playground': '<svg viewBox="0 0 520 220" role="img" aria-label="Граф с узлами и рёбрами"><path d="M110 110 L250 55 L400 115 L250 170 Z M110 110 L400 115" stroke="#7dd3fc" stroke-width="3" fill="none"/><circle cx="110" cy="110" r="24" fill="#17263c" stroke="#7dd3fc" stroke-width="3"/><circle cx="250" cy="55" r="24" fill="#17263c" stroke="#a78bfa" stroke-width="3"/><circle cx="400" cy="115" r="24" fill="#17263c" stroke="#67e8a5" stroke-width="3"/><circle cx="250" cy="170" r="24" fill="#17263c" stroke="#f4bf67" stroke-width="3"/><text x="103" y="116" fill="currentColor">A</text><text x="243" y="61" fill="currentColor">B</text><text x="393" y="121" fill="currentColor">C</text><text x="243" y="176" fill="currentColor">D</text></svg>',
+    'rnn-flow': '<svg viewBox="0 0 520 220" role="img" aria-label="Последовательность RNN"><path d="M70 110 H450" stroke="#7dd3fc" stroke-width="4"/><path d="M125 100 l12 10 -12 10 M225 100 l12 10 -12 10 M325 100 l12 10 -12 10" fill="none" stroke="#7dd3fc" stroke-width="3"/><rect x="45" y="72" width="55" height="76" rx="10" fill="#17263c" stroke="#7dd3fc"/><rect x="145" y="72" width="55" height="76" rx="10" fill="#17263c" stroke="#a78bfa"/><rect x="245" y="72" width="55" height="76" rx="10" fill="#17263c" stroke="#67e8a5"/><rect x="345" y="72" width="55" height="76" rx="10" fill="#17263c" stroke="#f4bf67"/><text x="61" y="115" fill="currentColor">x₁</text><text x="161" y="115" fill="currentColor">x₂</text><text x="261" y="115" fill="currentColor">x₃</text><text x="361" y="115" fill="currentColor">x₄</text></svg>',
+  }[kind] || '<svg viewBox="0 0 520 220" role="img" aria-label="Схема эксперимента"><path d="M40 170 C110 80 175 155 245 70 S370 140 480 45" fill="none" stroke="#7dd3fc" stroke-width="4"/><circle cx="245" cy="70" r="8" fill="#67e8a5"/><path d="M40 180 H480" stroke="rgba(148,163,184,.4)"/></svg>';
+  const controls = {
+    'variable-playground': '<label class="generic-control">Измените x<input type="range" min="0" max="10" value="3" data-lab-input="x"><output data-lab-output="x">3</output></label><div class="generic-result" data-lab-result>Вычисление: x + 1 = 4</div>',
+    'data-cleaning': '<label class="generic-control">Стратегия пропусков<select data-lab-input="missing"><option value="median">Заполнить медианой</option><option value="drop">Удалить строку</option></select></label><label class="generic-control">Обработать выброс<input type="checkbox" checked data-lab-input="outlier"></label><div class="generic-result" data-lab-result>После очистки: 3 строки, 0 пропусков, 0 выбросов</div>',
+    'tensor-shapes': '<label class="generic-control">Размер batch<input type="number" min="1" max="128" value="2" data-lab-input="batch"></label><label class="generic-control">Каналы<input type="number" min="1" max="8" value="3" data-lab-input="channels"></label><div class="generic-result" data-lab-result>Форма [2, 3, 28, 28] · 4704 чисел</div>',
+    'metric-choice': '<label class="generic-control">Порог классификации<input type="range" min="0" max="100" value="50" data-lab-input="threshold"><output data-lab-output="threshold">0.50</output></label><div class="generic-result" data-lab-result>Precision 0.78 · Recall 0.71 · F1 0.74</div>',
+    'hardware-selector': '<label class="generic-control">Размер модели, млрд параметров<input type="range" min="1" max="70" value="7" data-lab-input="params"><output data-lab-output="params">7B</output></label><label class="generic-control">Квантизация<select data-lab-input="quant"><option value="16">FP16</option><option value="8">INT8</option><option value="4">INT4</option></select></label><div class="generic-result" data-lab-result>Оценка VRAM: 14 GB · подходит GPU 16 GB</div>',
+    'memory-budget': '<label class="generic-control">Контекст, токенов<input type="range" min="1024" max="32768" step="1024" value="8192" data-lab-input="context"><output data-lab-output="context">8192</output></label><div class="generic-result" data-lab-result>Память KV-cache: 1.2 GB · запас: 4.8 GB</div>',
+  }[kind] || '<label class="generic-control">Интенсивность опыта<input type="range" min="0" max="100" value="50" data-lab-input="intensity"><output data-lab-output="intensity">50</output></label><button class="button button-primary" data-action="generic-lab-run">Запустить опыт</button><div class="generic-result" data-lab-result>Готово к запуску. Измените параметр и проверьте гипотезу.</div>';
+  generic.innerHTML = `<div class="generic-lab-header"><div><span class="generic-lab-kind">ИНТЕРАКТИВНАЯ ЛАБОРАТОРИЯ · ${escapeHtml(kind)}</span><h2>${escapeHtml(title)}</h2><p>${escapeHtml(description)}</p></div><button class="button button-primary" data-action="generic-lab-run">Запустить опыт</button></div><div class="generic-lab-body"><div class="generic-visual">${visual}</div><div class="generic-controls">${controls}</div></div><div class="generic-lab-footer"><span>Связанные понятия: ${(content.learning_objectives || lesson.objectives || []).slice(0, 3).map(escapeHtml).join(' · ')}</span><span>Проверка после опыта — кнопка «Перейти к проверке» выше</span></div>`;
+  updateGenericLab();
+}
+
+function updateGenericLab() {
+  const generic = $('#lab-generic');
+  if (!generic || generic.hidden) return;
+  const kind = generic.dataset.labKind;
+  const value = (name, fallback) => generic.querySelector(`[data-lab-input="${name}"]`)?.value ?? fallback;
+  const result = generic.querySelector('[data-lab-result]');
+  if (kind === 'variable-playground') {
+    const x = Number(value('x', 3));
+    generic.querySelector('[data-lab-output="x"]').textContent = String(x);
+    result.textContent = `Вычисление: x + 1 = ${x + 1}`;
+  } else if (kind === 'tensor-shapes') {
+    const batch = Number(value('batch', 2));
+    const channels = Number(value('channels', 3));
+    result.textContent = `Форма [${batch}, ${channels}, 28, 28] · ${batch * channels * 28 * 28} чисел`;
+  } else if (kind === 'metric-choice') {
+    const threshold = Number(value('threshold', 50));
+    generic.querySelector('[data-lab-output="threshold"]').textContent = (threshold / 100).toFixed(2);
+    const precision = (0.58 + threshold / 250).toFixed(2);
+    const recall = (0.95 - threshold / 250).toFixed(2);
+    const f1 = (2 * precision * recall / (Number(precision) + Number(recall))).toFixed(2);
+    result.textContent = `Precision ${precision} · Recall ${recall} · F1 ${f1}`;
+  } else if (kind === 'hardware-selector') {
+    const params = Number(value('params', 7));
+    const quant = Number(value('quant', 16));
+    const vram = (params * quant / 8).toFixed(1);
+    generic.querySelector('[data-lab-output="params"]').textContent = `${params}B`;
+    result.textContent = `Оценка VRAM: ${vram} GB · ${vram <= 16 ? 'подходит GPU 16 GB' : 'нужен GPU с большей памятью'}`;
+  } else if (kind === 'memory-budget') {
+    const context = Number(value('context', 8192));
+    generic.querySelector('[data-lab-output="context"]').textContent = String(context);
+    result.textContent = `Память KV-cache: ${(context / 6800).toFixed(1)} GB · запас ${(8 - context / 6800).toFixed(1)} GB`;
+  } else if (kind === 'data-cleaning') {
+    const missing = value('missing', 'median');
+    const outlier = generic.querySelector('[data-lab-input="outlier"]')?.checked;
+    result.textContent = `После очистки: ${missing === 'drop' ? 2 : 3} строки, 0 пропусков, ${outlier ? 0 : 1} выбросов`;
+  }
 }
 
 function openLesson(lessonId) {
@@ -420,13 +518,41 @@ async function loadExams() {
   const list = $('#exam-list');
   try {
     const exams = await fetchJson('/api/exams');
-    list.innerHTML = exams.map((exam) => `<div class="role-row"><span class="mastery-icon cyan">◉</span><div><strong>${escapeHtml(exam.title)}</strong><span>версия ${escapeHtml(exam.version)} · ${exam.question_count} вопросов · проходной порог ${exam.pass_percent}%</span></div><button class="text-button" data-exam-start="${exam.id}">Начать →</button></div>`).join('') || '<div class="empty-state">Опубликованных экзаменов пока нет.</div>';
+    const examAction = localStorage.getItem('ailab:token') ? 'Начать →' : 'Войти для начала →';
+    list.innerHTML = exams.map((exam) => `<div class="role-row"><span class="mastery-icon cyan">◉</span><div><strong>${escapeHtml(exam.title)}</strong><span>версия ${escapeHtml(exam.version)} · ${exam.question_count} вопросов · проходной порог ${exam.pass_percent}%</span></div><button class="text-button" data-exam-start="${exam.id}">${examAction}</button></div>`).join('') || '<div class="empty-state">Опубликованных экзаменов пока нет.</div>';
     if (localStorage.getItem('ailab:token')) {
       const attempts = await fetchJson('/api/attempts/me');
       $('#attempt-list').innerHTML = attempts.map((attempt) => `<div class="role-row"><span class="mastery-icon ${attempt.passed ? 'cyan' : 'amber'}">${attempt.passed ? '✓' : '·'}</span><div><strong>Попытка #${attempt.id}</strong><span>${attempt.score_percent}% · ${attempt.status}</span></div></div>`).join('') || '<div class="empty-state">Попыток пока нет.</div>';
     }
   } catch (error) {
     list.innerHTML = '<div class="empty-state">Войдите в аккаунт, чтобы начать экзамен.</div>';
+  }
+}
+
+async function loadTaskForCurrentLesson() {
+  const list = $('#task-answer-list');
+  if (!list) return;
+  try {
+    const bank = await fetchJson('/api/questions');
+    const normalized = normalizeLessonId(state.lessonId);
+    const question = bank.find((item) => normalizeLessonId(item.lesson_id) === normalized) || bank[0];
+    state.taskQuestion = question;
+    state.selectedAnswer = null;
+    const options = question.options || [];
+    $('#task-badge').textContent = question.lesson_id ? `УРОК ${question.lesson_id}` : 'ПРОВЕРКА';
+    $('#task-position').textContent = `Вопрос по уроку ${question.lesson_id || normalized}`;
+    $('#task-difficulty').textContent = question.difficulty || '● ● ○';
+    $('#task-question-title').textContent = question.prompt || 'Проверьте понимание темы.';
+    $('#task-question-context').textContent = question.solution || 'Выберите ответ, затем разберите причину результата.';
+    if (options.length) {
+      list.innerHTML = options.map((option, index) => `<button class="answer" data-answer="${escapeHtml(option)}"><span class="answer-key">${String.fromCharCode(65 + index)}</span><span>${escapeHtml(option)}</span></button>`).join('');
+    } else {
+      list.innerHTML = `<label class="generic-control" for="task-free-answer">Ответ</label><input id="task-free-answer" data-answer-input type="text" placeholder="Введите ответ" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;color:var(--text);background:var(--surface-2)">`;
+    }
+    $('#question-feedback').textContent = '';
+    $('#task-score').textContent = '0 / 0';
+  } catch (error) {
+    $('#question-feedback').textContent = 'Не удалось загрузить вопрос. Откройте лекцию и повторите попытку.';
   }
 }
 
@@ -439,7 +565,10 @@ async function startExam(examId) {
     $('#exam-workspace').hidden = false; $('#exam-workspace-title').textContent = started.exam.title;
     $('#exam-questions').innerHTML = state.exam.questions.map((question, index) => { const selectId = `exam-answer-${escapeHtml(question.id)}`; return `<div class="exam-question" style="padding:14px 0;border-bottom:1px solid var(--line)"><p><strong>${index + 1}. ${escapeHtml(question.prompt)}</strong></p><label for="${selectId}">Ответ к вопросу ${index + 1}</label><select id="${selectId}" data-exam-answer="${escapeHtml(question.id)}" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;color:var(--text);background:var(--surface-2)"><option value="">Выберите ответ</option>${(question.options || []).map((option) => `<option value="${escapeHtml(option)}">${escapeHtml(option)}</option>`).join('')}</select></div>`; }).join('');
     $('#exam-output').textContent = 'Попытка сохранена. Ответьте на вопросы и отправьте её.';
-  } catch (error) { showToast(error.message || 'Не удалось начать экзамен', 'info'); }
+  } catch (error) {
+    const message = /Bearer|токен|401/i.test(error.message || '') ? 'Сначала войдите или зарегистрируйтесь. Токен создаётся автоматически после входа.' : (error.message || 'Не удалось начать экзамен');
+    showToast(message, 'info');
+  }
 }
 
 async function submitExam() {
@@ -506,10 +635,13 @@ function chooseAnswer(button) {
 
 function checkAnswer() {
   const feedback = $('#question-feedback');
-  if (!state.selectedAnswer) { feedback.className = 'question-feedback bad'; feedback.textContent = 'Выберите вариант, затем нажмите «Проверить ответ».'; return; }
-  $$('.answer').forEach((answer) => { answer.classList.remove('correct', 'wrong'); if (answer.dataset.answer === 'b') answer.classList.add('correct'); if (answer.dataset.answer === state.selectedAnswer && state.selectedAnswer !== 'b') answer.classList.add('wrong'); });
-  if (state.selectedAnswer === 'b') { feedback.className = 'question-feedback good'; feedback.textContent = 'Верно. Нулевой градиент означает, что локально нет направления уменьшения. Это не гарантирует глобальный минимум.'; showToast('Ответ принят · +10 XP', 'success'); }
-  else { feedback.className = 'question-feedback bad'; feedback.textContent = 'Пока нет. Градиент показывает направление изменения функции, а нулевой градиент означает отсутствие локального шага. Повторите урок 1.04.'; }
+  const input = $('#task-free-answer');
+  const selected = state.selectedAnswer || input?.value.trim();
+  const expected = state.taskQuestion?.answer;
+  if (!selected) { feedback.className = 'question-feedback bad'; feedback.textContent = 'Введите или выберите ответ, затем нажмите «Проверить ответ».'; return; }
+  $$('.answer').forEach((answer) => { answer.classList.remove('correct', 'wrong'); if (answer.dataset.answer === String(expected)) answer.classList.add('correct'); if (answer.dataset.answer === selected && String(expected) !== selected) answer.classList.add('wrong'); });
+  if (String(expected).trim().toLowerCase() === String(selected).trim().toLowerCase()) { feedback.className = 'question-feedback good'; feedback.textContent = state.taskQuestion?.solution || 'Верно. Разберите, почему этот ответ следует из лекции.'; $('#task-score').textContent = '1 / 1'; showToast('Ответ принят · +10 XP', 'success'); }
+  else { feedback.className = 'question-feedback bad'; feedback.textContent = state.taskQuestion?.solution ? `Пока нет. Подсказка: ${state.taskQuestion.solution}` : 'Пока нет. Вернитесь к лекции и повторите пример.'; $('#task-score').textContent = '0 / 1'; }
 }
 
 async function submitTutor() {
@@ -621,11 +753,43 @@ function exportProgress() {
   const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'ai-learning-lab-progress.json'; a.click(); URL.revokeObjectURL(url); showToast('Прогресс экспортирован', 'success');
 }
 
+function openProjectWorkspace() {
+  const workspace = $('#project-workspace');
+  if (!workspace) return;
+  closeModal();
+  setView('projects');
+  workspace.hidden = false;
+  workspace.innerHTML = `<span class="panel-kicker">ПРОЕКТ · МОДУЛЬ 02</span><h2>Предсказатель стоимости жилья</h2><p>Соберите воспроизводимый ML-конвейер от постановки задачи до модельной карточки. Каждый шаг связан с уроком, лабораторией и acceptance-проверкой.</p><div class="project-workspace-grid"><div><h3>План работы</h3><ul class="project-step-list"><li><input type="checkbox" data-project-step="problem"><span><strong>1. Сформулировать задачу</strong><br>Целевая переменная, единица наблюдения и риск утечки.</span></li><li><input type="checkbox" data-project-step="data"><span><strong>2. Подготовить данные</strong><br>Разбиение train/validation/test до вычисления статистик.</span></li><li><input type="checkbox" data-project-step="models"><span><strong>3. Сравнить модели</strong><br>Baseline, дерево и ансамбль с одинаковым протоколом оценки.</span></li><li><input type="checkbox" data-project-step="errors"><span><strong>4. Разобрать ошибки</strong><br>Пять примеров, где модель ошиблась, и гипотеза улучшения.</span></li><li><input type="checkbox" data-project-step="card"><span><strong>5. Оформить модельную карточку</strong><br>Данные, метрики, ограничения, мониторинг и план отката.</span></li></ul></div><div class="project-acceptance"><h3>Acceptance criteria</h3><ul><li>Нет data leakage</li><li>MAE и RMSE на отложенной выборке</li><li>Сравнены минимум три модели</li><li>Описаны пять ошибок</li><li>README запускается одной командой</li></ul><div id="project-check-output" class="generic-result" style="margin-top:14px">Проверки ещё не запускались.</div></div></div><div class="project-workspace-actions"><button class="button button-primary" data-action="project-run-check">Запустить acceptance-проверки</button><button class="button button-ghost" data-action="project-open-sandbox">Открыть sandbox</button><button class="button button-ghost" data-action="project-save">Сохранить шаги</button></div>`;
+  workspace.scrollIntoView({behavior: 'smooth', block: 'start'});
+}
+
+async function runProjectCheck() {
+  const output = $('#project-check-output');
+  if (!output) return;
+  output.textContent = 'Запускаю минимальный smoke-проверочный набор…';
+  try {
+    const response = await fetch('/api/code/run', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({code: 'print("project smoke: OK")', timeout_seconds: 3})});
+    const result = await response.json();
+    output.textContent = result.status === 'ok' ? 'Smoke-проверка sandbox пройдена. Заполните пять шагов проекта и приложите результаты.' : 'Проверка sandbox завершилась с ошибкой.';
+    output.className = result.status === 'ok' ? 'generic-result' : 'generic-result bad';
+  } catch (error) {
+    output.className = 'generic-result bad';
+    output.textContent = 'Sandbox недоступен. Проверьте Docker worker.';
+  }
+}
+
+function saveProjectSteps() {
+  const completed = $$('[data-project-step]:checked').map((item) => item.dataset.projectStep);
+  localStorage.setItem('ailab:project-steps', JSON.stringify(completed));
+  showToast(`Сохранено шагов: ${completed.length}`, 'success');
+}
+
 function action(name, element = null) {
   const actions = {
     'toggle-theme': () => { state.theme = state.theme === 'dark' ? 'light' : 'dark'; applyTheme(); drawLab(); showToast(state.theme === 'dark' ? 'Тёмная тема включена' : 'Светлая тема включена'); },
     'continue-learning': () => openLesson(state.lessonId),
-    'lesson-lab': () => { setView('lab'); requestAnimationFrame(() => $('#gradient-canvas')?.scrollIntoView({behavior: 'smooth', block: 'center'})); },
+    'lesson-lab': () => { setView('lab'); requestAnimationFrame(() => { const target = $('#lab-generic')?.hidden ? $('#gradient-canvas') : $('#lab-generic'); target?.scrollIntoView({behavior: 'smooth', block: 'center'}); }); },
+    'generic-lab-run': () => { updateGenericLab(); showToast('Опыт пересчитан', 'success'); },
     'lesson-tasks': () => setView('tasks'),
     'lesson-exam': () => setView('exam'),
     'lesson-prev': () => moveLesson(-1),
@@ -643,8 +807,11 @@ function action(name, element = null) {
     'open-code-runner': () => openModal('Безопасный Python-runner', '<p>Код отправляется в отдельный worker с ограничением времени, вывода, памяти и запрещёнными операциями. Сеть и доступ к секретам отключены на production-границе контейнера.</p><textarea id="code-editor" rows="8" class="modal-code" style="width:100%;resize:vertical">print(2 + 3)</textarea><pre id="code-output" class="modal-code" aria-live="polite">Готово к запуску</pre>', '<button class="button button-primary" data-action="run-code">Запустить в sandbox →</button>'),
     'run-code': runCode,
     'check-answer': checkAnswer,
-    'open-project': () => openModal('Проект · предсказатель стоимости жилья', '<p>Соберите воспроизводимый ноутбук на табличном наборе данных. Опишите целевую переменную, проведите разбиение до вычисления статистик, сравните три исходные модели и заполните модельную карточку.</p><div class="modal-code">Acceptance tests<br>✓ разбиение без утечки<br>✓ MAE и RMSE на тесте<br>✓ анализ пяти ошибок<br>✓ README с одной командой запуска</div>', '<button class="button button-primary" data-action="start-project">Открыть шаблон →</button>'),
-    'start-project': () => { closeModal(); showToast('Шаблон проекта открыт в демо-режиме', 'success'); },
+    'open-project': openProjectWorkspace,
+    'start-project': openProjectWorkspace,
+    'project-run-check': runProjectCheck,
+    'project-open-sandbox': () => action('open-code-runner'),
+    'project-save': saveProjectSteps,
     'new-project': () => openModal('Новый проект', '<p>Выберите основу для портфолио. Сейчас доступны 6 сквозных сценариев, которые открываются по prerequisite-графу.</p><div class="modal-actions"><button class="button button-primary" data-action="start-project">Предсказатель стоимости →</button></div>'),
     'tutor': () => openModal('AI-тьютор · режим наводящих вопросов', '<p>Тьютор сначала просит вашу попытку, затем даёт подсказку и цитирует материалы курса. Готовое решение не раскрывается до попытки.</p><label class="range-label" for="tutor-question">Вопрос</label><textarea id="tutor-question" rows="3" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;color:var(--text);background:var(--surface-2)" placeholder="Например, почему градиент меняет знак?"></textarea><label class="range-label" for="tutor-attempt">Ваша попытка</label><textarea id="tutor-attempt" rows="3" style="width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;color:var(--text);background:var(--surface-2)" placeholder="Что вы уже проверили?"></textarea><div id="tutor-output" class="question-feedback" role="status"></div>', '<button class="button button-ghost" data-action="go-lab">Открыть лабораторию</button><button class="button button-primary" data-action="tutor-submit">Спросить тьютора →</button>'),
     'tutor-submit': submitTutor,
@@ -696,6 +863,7 @@ $('#term-search').addEventListener('input', (event) => renderTerms(event.target.
 $('#alumni-search')?.addEventListener('input', (event) => loadAlumni(event.target.value));
 $$('[data-theme-choice]').forEach((button) => button.addEventListener('click', () => { state.theme = button.dataset.themeChoice; applyTheme(); drawLab(); }));
 $('#reduce-motion').addEventListener('change', (event) => document.documentElement.classList.toggle('reduced-motion', event.target.checked));
+$('#font-size')?.addEventListener('input', (event) => { state.fontSize = Number(event.target.value); applyTypography(); });
 window.addEventListener('resize', () => { if (state.view === 'lab') drawLab(); });
 document.addEventListener('keydown', (event) => { if (event.key === 'Escape') closeModal(); });
 document.addEventListener('keydown', (event) => {
@@ -705,9 +873,12 @@ document.addEventListener('keydown', (event) => {
   event.preventDefault();
   action(actionButton.dataset.action, actionButton);
 });
+document.addEventListener('input', (event) => {
+  if (event.target.matches('[data-lab-input]')) updateGenericLab();
+});
 
 $$('[data-tooltip]').forEach((element) => {
   if (!element.getAttribute('aria-label')) element.setAttribute('aria-label', `Подсказка. ${element.dataset.tooltip}`);
   element.title = element.dataset.tooltip;
 });
-applyTheme(); renderDashboardDate(); renderProgress(); setView(state.view); renderTerms(); loadTerms(); loadLessons(); loadCurrentUser(); drawLab();
+applyTheme(); applyTypography(); renderDashboardDate(); renderProgress(); setView(state.view); renderTerms(); loadTerms(); loadLessons(); loadCurrentUser(); drawLab();
