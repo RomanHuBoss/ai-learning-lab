@@ -32,21 +32,45 @@ def lab_for(title):
         return "type-inspector"
     if "перемен" in value or "тип" in value:
         return "variable-playground"
+    if "вероят" in value or "случайн" in value:
+        return "metric-choice"
     if "услов" in value or "цик" in value or "функц" in value:
         return "function-plot"
     if "numpy" in value or "вектор" in value or "матриц" in value:
         return "tensor-shapes"
     if "данн" in value or "pandas" in value or "пропуск" in value or "категор" in value or "разбиен" in value:
         return "data-cleaning"
-    if "вероят" in value or "случайн" in value:
-        return "metric-choice"
     return "concept-map"
 
 
 def profile(lesson):
     title = lesson["title"]
     value = title.lower()
-    if "производн" in value or "градиент" in value or "оптимиз" in value or "потер" in value:
+    if "математическ" in value or ("модел" in value and "функц" in value):
+        intuition = "Функция задаёт правило, которое каждому допустимому входу сопоставляет результат. График делает это правило видимым: по его наклону можно понять, как изменится результат при небольшом изменении признака."
+        formal = "Функция f: X → Y отображает вход x в результат y=f(x). Для линейной зависимости y = a·x + b параметр a задаёт наклон, b — значение при x=0. Область определения и единицы измерения входят в модель и должны быть указаны явно."
+        manual = "Рассмотрите y = 2x + 3. Для x=0, 1 и 4 получаются y=3, 5 и 11. Сравните приращения: увеличение x на 1 добавляет к результату 2, поэтому наклон равен 2."
+        formulas = ["y = f(x)", "y = a · x + b", "наклон = Δy / Δx"]
+        table = {"columns": ["x", "f(x)=2x+3", "Изменение x", "Изменение y"], "rows": [["0", "3", "—", "—"], ["1", "5", "+1", "+2"], ["4", "11", "+3", "+6"]]}
+        graph = {"type": "line", "x_label": "вход x", "y_label": "результат f(x)", "series": [{"name": "y = 2x + 3", "values": [3, 5, 7, 9, 11]}]}
+        code = "# Функция как математическая модель\ndef model(x):\n    return 2 * x + 3\n\nfor x in (0, 1, 4):\n    print(x, model(x))"
+    elif "исследователь" in value or "гипотез" in value:
+        intuition = "Исследовательский отчёт связывает вопрос, данные, измерение и вывод. Читатель должен видеть, откуда взялись числа, какое сравнение проведено и где заканчивается уверенность результата."
+        formal = "Отчёт фиксирует постановку H₀/H₁, источник и разбиение данных, выбранную метрику и неопределённость оценки. Вывод должен быть воспроизводимым: другой человек получает тот же результат из тех же версий данных и кода."
+        manual = "Сравните две группы значений A=[10, 12, 11] и B=[8, 9, 10]. Посчитайте средние, разницу 2,0 и перечислите ограничения вывода по трём наблюдениям."
+        formulas = ["разница = среднее(A) − среднее(B)", "вывод = результат + допущения + ограничения"]
+        table = {"columns": ["Шаг отчёта", "Что фиксируем", "Проверка"], "rows": [["1", "вопрос и гипотеза", "гипотеза измерима"], ["2", "данные и разбиение", "нет утечки"], ["3", "метрика и вывод", "указаны ограничения"]]}
+        graph = {"type": "bar", "x_label": "группа", "y_label": "среднее значение", "series": [{"name": "среднее", "values": [11, 9]}]}
+        code = "# Минимальный исследовательский отчёт\ngroup_a = [10, 12, 11]\ngroup_b = [8, 9, 10]\nmean = lambda values: sum(values) / len(values)\nprint(round(mean(group_a) - mean(group_b), 2))"
+    elif "случайн" in value:
+        intuition = "Случайная величина переводит исход эксперимента в число, поэтому можно обсуждать не один результат, а распределение и его типичные отклонения."
+        formal = "Случайная величина X имеет распределение вероятностей. Математическое ожидание E[X] задаёт центр, а дисперсия Var(X)=E[(X−E[X])²] измеряет разброс вокруг него."
+        manual = "Для честной кости X∈{1,…,6} все исходы имеют вероятность 1/6. Среднее E[X]=3,5. Сравните его с наблюдаемой серией 1, 6, 2 и объясните, почему трёх бросков мало для вывода."
+        formulas = ["E[X] = Σ x · P(X=x)", "Var(X) = E[(X − E[X])²]"]
+        table = {"columns": ["Исход x", "P(X=x)", "x·P(X=x)"], "rows": [["1", "1/6", "0,167"], ["3", "1/6", "0,500"], ["6", "1/6", "1,000"]]}
+        graph = {"type": "bar", "x_label": "исход x", "y_label": "вероятность", "series": [{"name": "честная кость", "values": [0.167, 0.167, 0.167, 0.167, 0.167, 0.167]}]}
+        code = "# Распределение честной кости\noutcomes = range(1, 7)\nmean = sum(outcomes) / len(tuple(outcomes))\nprint(mean)"
+    elif "производн" in value or "градиент" in value or "оптимиз" in value or "потер" in value:
         intuition = "Производная показывает локальный наклон, а градиент говорит, в какую сторону изменить параметр, чтобы уменьшить ошибку. Один числовой шаг связывает формулу с поведением модели."
         formal = "Для L(w)=w² производная dL/dw=2w. Обновление w ← w − η·dL/dw уменьшает L при подходящей скорости η и может перескочить минимум при слишком большом шаге."
         manual = "Возьмите w=3 и η=0,1. Градиент равен 6, новый вес 2,4, а потеря меняется с 9 до 5,76. Повторите шаг и сравните скорость уменьшения."
@@ -70,6 +94,14 @@ def profile(lesson):
         table = {"columns": ["Имя", "Значение", "Тип", "Операция"], "rows": [["price", "1200", "int", "умножение"], ["discount", "0,15", "float", "вычитание"], ["net", "1020", "float", "результат"]]}
         graph = {"type": "line", "x_label": "скидка", "y_label": "цена", "series": [{"name": "net", "values": [1200, 1140, 1080, 1020]}]}
         code = "price = 1200\ndiscount = 0.15\nnet = price * (1 - discount)\nprint(net)"
+    elif "вероят" in value:
+        intuition = "Вероятность описывает неопределённость числом от 0 до 1. Условная вероятность уточняет оценку после того, как стало известно событие B, поэтому порядок вопроса и доступная информация имеют значение."
+        formal = "Для событий A и B при P(B)>0 условная вероятность равна P(A|B)=P(A∩B)/P(B). Независимость означает P(A|B)=P(A), а не просто отсутствие связи в одном наблюдении."
+        manual = "Из 100 заявок 20 относятся к сегменту B, а 5 одновременно имеют событие A. Тогда P(A|B)=5/20=0,25. Сравните с P(A)=5/100=0,05 и объясните разницу знаменателей."
+        formulas = ["P(A|B) = P(A∩B) / P(B)", "P(A) = число исходов A / число всех исходов"]
+        table = {"columns": ["Событие", "Количество", "Вероятность"], "rows": [["B", "20", "0,20"], ["A∩B", "5", "0,05"], ["A|B", "5 из 20", "0,25"]]}
+        graph = {"type": "bar", "x_label": "событие", "y_label": "вероятность", "series": [{"name": "оценка", "values": [0.05, 0.2, 0.25]}]}
+        code = "# Условная вероятность\na_and_b = 5\nb = 20\nprint(a_and_b / b)"
     elif "услов" in value or "цик" in value or "функц" in value:
         intuition = "Условие выбирает ветку, цикл повторяет шаг, а функция собирает повторяемое правило с входами и выходом. Вместе они превращают расчёт в проверяемый алгоритм."
         formal = "Функция f принимает аргументы и возвращает результат. Ветвление выбирает путь по булеву условию, а цикл применяет тело к последовательности до выполнения условия остановки."
@@ -112,6 +144,7 @@ for lesson_id, lesson in program_by_id.items():
     current = profile(lesson)
     item.update({
         "title": lesson["title"],
+        "why_it_matters": f"Тема «{lesson['title']}» нужна, чтобы связать понятие с проверяемым расчётом и применить его в задаче ML/AI.",
         "prerequisites": [normalize(value) for value in lesson.get("prerequisite_ids", [])],
         "learning_objectives": lesson.get("objectives", []),
         "what_is_known": [f"Перед этим уроком нужно понимать тему «{content_by_id.get(normalize(lesson.get('prerequisite_ids', [''])[0]), {}).get('title', 'предыдущий урок')}»." if lesson.get("prerequisite_ids") else "Умеете читать числа и проверять небольшой пример."],
@@ -136,3 +169,35 @@ for lesson_id, question_id in legacy_first_module_questions.items():
         content_by_id[lesson_id]["mini_test"] = question_id
 
 (ROOT / "data/lesson_content.json").write_text(json.dumps(content, ensure_ascii=False, indent=2) + "\n", encoding="utf8")
+
+# Replace generated goal-recitation questions with checks that use each lesson's
+# own formulas.  The old prompts tested whether a learner could repeat a
+# template objective, so they could pass without understanding the material.
+for question in questions:
+    prompt = str(question.get("prompt", ""))
+    if "Какая цель относится" not in prompt and "Какой признак покажет" not in prompt:
+        continue
+    lesson_id = normalize(question.get("lesson_id"))
+    lesson = content_by_id.get(lesson_id)
+    if not lesson:
+        continue
+    formulas = [str(value) for value in lesson.get("formulas", []) if str(value).strip()]
+    if not formulas:
+        continue
+    title = lesson["title"]
+    if "Какая цель относится" in prompt:
+        answer = formulas[0]
+        question["prompt"] = f"Какое правило используется в теме «{title}»?"
+        question["options"] = [answer, "Изменять входы после проверки результата", "Игнорировать размерность и единицы измерения"]
+        question["answer"] = answer
+        question["solution"] = f"В уроке «{title}» разбирается правило «{answer}». Его нужно применить к числовому примеру и проверить результат."
+        question["misconception_tags"] = ["формула-путают-с-выводом", f"lesson-{question.get('lesson_id')}"]
+    else:
+        answer = formulas[1] if len(formulas) > 1 else formulas[0]
+        question["prompt"] = f"Какой расчёт нужно уметь повторить в теме «{title}»?"
+        question["options"] = [answer, "Сделать вывод без данных и описания ограничений", "Выбрать самый сложный метод без проверки"]
+        question["answer"] = answer
+        question["solution"] = f"Проверка понимания темы «{title}» включает самостоятельное воспроизведение расчёта «{answer}» и сверку с исходными данными."
+        question["misconception_tags"] = ["проверка-без-расчёта", f"lesson-{question.get('lesson_id')}"]
+
+(ROOT / "data/questions.json").write_text(json.dumps(questions, ensure_ascii=False, indent=2) + "\n", encoding="utf8")
