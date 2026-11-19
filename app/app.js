@@ -5,6 +5,8 @@ const state = {
   progress: Number(localStorage.getItem('ailab:progress') || 0),
   lessonId: localStorage.getItem('ailab:lesson') || '1.01',
   lessons: [],
+  modules: [],
+  selectedModuleId: localStorage.getItem('ailab:module') || '',
   lessonContent: new Map(),
   currentUser: null,
   lab: { step: 0, running: false, timer: null, w: -3 },
@@ -38,6 +40,7 @@ function persist() {
   localStorage.setItem('ailab:font-size', String(state.fontSize));
   localStorage.setItem('ailab:progress', String(state.progress));
   localStorage.setItem('ailab:lesson', state.lessonId);
+  localStorage.setItem('ailab:module', state.selectedModuleId);
 }
 
 function renderProgress() {
@@ -60,6 +63,7 @@ function renderPathState() {
   const pathModule = $('#path-module');
   if (pathProgress) pathProgress.textContent = `${completed} / 36`;
   if (pathModule) pathModule.textContent = String(Math.min(9, Math.floor(completed / 4) + 1)).padStart(2, '0');
+  renderPathGraph();
   const graphNodes = $$('.graph-node[data-lesson-id]');
   if (!graphNodes.length) return;
   const activeLessonIndex = Math.max(0, state.lessons.findIndex((lesson) => lesson.id === state.lessonId));
@@ -73,6 +77,34 @@ function renderPathState() {
     const status = node.querySelector('small');
     if (status) status.textContent = completedNode ? 'освоено' : currentNode ? 'сейчас' : 'доступно после проверки';
   });
+}
+
+function renderPathGraph() {
+  const tabs = $('#path-module-tabs');
+  const canvas = $('#graph-canvas');
+  if (!tabs || !canvas || !state.lessons.length) return;
+  const modules = state.modules.length ? state.modules : [...new Map(state.lessons.map((lesson) => [lesson.module_id || `m-${lesson.id.split('.')[0]}`, {id: lesson.module_id || `m-${lesson.id.split('.')[0]}`, title: lesson.stage || 'Модуль'}])).values()];
+  const activeLesson = currentLesson();
+  const selectedId = state.selectedModuleId && modules.some((module) => module.id === state.selectedModuleId) ? state.selectedModuleId : activeLesson?.module_id || modules[0]?.id;
+  state.selectedModuleId = selectedId || '';
+  tabs.innerHTML = modules.map((module, index) => `<button class="path-module-tab ${module.id === selectedId ? 'active' : ''}" role="tab" aria-selected="${module.id === selectedId}" data-action="select-module" data-module-id="${escapeHtml(module.id)}">${String(index + 1).padStart(2, '0')} · ${escapeHtml(module.title || module.stage || 'Модуль')}</button>`).join('');
+  const module = modules.find((item) => item.id === selectedId) || modules[0];
+  const moduleLessons = state.lessons.filter((lesson) => (lesson.module_id || `m-${lesson.id.split('.')[0]}`) === module.id);
+  $('#path-module-title').textContent = `${module.title || module.stage || 'Модуль'} · ${moduleLessons.length} урока`;
+  $('#path-module-description').textContent = module.description || module.focus || 'Уроки модуля связаны prerequisite-переходами.';
+  const positions = moduleLessons.map((_, index) => [120 + index * 240, 200]);
+  const lines = moduleLessons.slice(1).map((_, index) => `<path d="M${positions[index][0]} 200 L${positions[index + 1][0]} 200"/>`).join('');
+  const nodes = moduleLessons.map((lesson, index) => {
+    const lessonIndex = state.lessons.findIndex((item) => item.id === lesson.id);
+    const completed = Boolean(state.currentUser) && lessonIndex >= 0 && lessonIndex < Math.round(state.progress * 36 / 100);
+    const current = lesson.id === state.lessonId;
+    const className = completed ? 'complete' : current ? 'current' : 'locked';
+    const content = state.lessonContent.get(lesson.id) || {};
+    const title = content.title || lesson.title || lesson.id;
+    return `<div class="graph-node ${className}" role="button" tabindex="0" data-action="open-lesson" data-lesson-id="${escapeHtml(lesson.id)}" aria-label="Открыть урок ${escapeHtml(lesson.id)}" style="left:${(positions[index][0] / 9.6)}%;top:50%"><span>${String(index + 1).padStart(2, '0')}</span><strong>${escapeHtml(title)}</strong><small>${completed ? 'освоено' : current ? 'сейчас' : 'доступно после проверки'}</small></div>`;
+  }).join('');
+  canvas.innerHTML = `<svg class="graph-lines" viewBox="0 0 960 400" preserveAspectRatio="none" aria-hidden="true">${lines}</svg>${nodes}`;
+  persist();
 }
 
 function applyRoleVisibility() {
@@ -305,7 +337,11 @@ function updateGenericLab() {
 
 function openLesson(lessonId) {
   const normalizedId = normalizeLessonId(lessonId);
-  if (normalizedId && state.lessons.some((lesson) => lesson.id === normalizedId)) state.lessonId = normalizedId;
+  const target = state.lessons.find((lesson) => lesson.id === normalizedId);
+  if (target) {
+    state.lessonId = normalizedId;
+    state.selectedModuleId = target.module_id || `m-${normalizedId.split('.')[0]}`;
+  }
   setView('lab');
   renderLesson();
 }
@@ -323,6 +359,7 @@ async function loadLessons() {
   renderLesson();
   try {
     const [program, content] = await Promise.all([fetchJson('/api/full-program'), fetchJson('/api/lesson-content')]);
+    state.modules = program.modules || [];
     state.lessons = (program.lessons || []).map((lesson) => ({...lesson, id: normalizeLessonId(lesson.id), lab: lesson.lab || lesson.lab_id}));
     (content.lessons || []).forEach((lesson) => state.lessonContent.set(normalizeLessonId(lesson.lesson_id), lesson));
     state.lessonId = normalizeLessonId(state.lessonId);
@@ -331,6 +368,7 @@ async function loadLessons() {
   } catch (error) {
     try {
       const [program, content] = await Promise.all([fetchJson('/data/full_program.json'), fetchJson('/data/lesson_content.json')]);
+      state.modules = program.modules || [];
       state.lessons = (program.lessons || []).map((lesson) => ({...lesson, id: normalizeLessonId(lesson.id), lab: lesson.lab || lesson.lab_id}));
       (content.lessons || []).forEach((lesson) => state.lessonContent.set(normalizeLessonId(lesson.lesson_id), lesson));
       if (!state.lessons.some((lesson) => lesson.id === state.lessonId)) state.lessonId = state.lessons[0].id;
@@ -795,6 +833,7 @@ function action(name, element = null) {
     'lesson-exam': () => setView('exam'),
     'lesson-prev': () => moveLesson(-1),
     'lesson-next': () => moveLesson(1),
+    'select-module': () => { state.selectedModuleId = element?.dataset.moduleId || state.selectedModuleId; renderPathGraph(); },
     'open-diagnostic': () => openModal('Входная диагностика', '<p>Демо-диагностика состоит из 36 адаптивных вопросов. Ответы помогут выбрать темп и открыть первый prerequisite-узел.</p><div class="modal-code">01 · арифметика и функции<br>02 · Python и алгоритмы<br>03 · вероятность и статистика<br>04 · интуиция машинного обучения</div>', '<button class="button button-ghost" data-action="close-modal">Позже</button><button class="button button-primary" data-action="start-diagnostic">Начать диагностику →</button>'),
     'start-diagnostic': () => { closeModal(); showToast('Диагностика запланирована · первый блок готов'); setView('tasks'); },
     'open-review': () => openModal('Повторение · функция потерь', '<p>Сравните две точки на параболе и объясните, почему знак градиента меняет направление шага.</p><div class="modal-code">L(w) = w²<br>∂L/∂w = 2w<br><br>Если w &lt; 0, градиент отрицательный, поэтому шаг увеличивает w.</div>', '<button class="button button-primary" data-action="go-lab">Открыть лабораторию →</button>'),

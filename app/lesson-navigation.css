@@ -1,4 +1,7 @@
 .lesson-navigation{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:13px;padding:13px 16px}
+.path-module-tabs{display:flex;gap:8px;overflow-x:auto;margin-bottom:13px;padding:2px 1px 8px;scrollbar-width:thin}
+.path-module-tab{flex:0 0 auto;padding:9px 12px;border:1px solid var(--line);border-radius:9px;color:var(--text-muted);background:var(--surface);font-size:10px;white-space:nowrap}
+.path-module-tab:hover,.path-module-tab.active{border-color:var(--cyan);color:var(--text);background:rgba(125,211,252,.09)}
 .lesson-navigation-current{min-width:0;display:flex;flex-direction:column;align-items:center;gap:3px;text-align:center}
 .lesson-navigation-current strong{max-width:460px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
 .lesson-navigation-current span:last-child{color:var(--text-muted);font-size:10px}
