@@ -224,6 +224,39 @@ function normalizeLessonId(value) {
   return String(value || '').replace(/^0(?=\d\.)/, '');
 }
 
+function renderLessonVisualization(content) {
+  const visualization = content.visualization || {};
+  const fallback = visualization.fallback || 'Схема и маленький численный пример помогают связать формулу с наблюдаемым поведением.';
+  const alt = visualization.alt || 'Иллюстрация к теме урока';
+  if (visualization.svg) return `<figure class="lesson-visual lesson-visual-svg" role="img" aria-label="${escapeHtml(alt)}">${visualization.svg}<figcaption>${escapeHtml(alt)}</figcaption></figure>`;
+  const table = visualization.table;
+  if (table) {
+    const headers = table.headers || table.columns || [];
+    const rows = table.rows || [];
+    return `<figure class="lesson-visual lesson-visual-table"><table><caption>${escapeHtml(table.caption || alt)}</caption><thead><tr>${headers.map((header) => `<th scope="col">${escapeHtml(header)}</th>`).join('')}</tr></thead><tbody>${rows.map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join('')}</tr>`).join('')}</tbody></table></figure>`;
+  }
+  const points = visualization.points;
+  if (Array.isArray(points) && points.length > 1) {
+    const values = points.map((point) => ({x: Number(point.x), y: Number(point.y)})).filter((point) => Number.isFinite(point.x) && Number.isFinite(point.y));
+    if (values.length > 1) {
+      const minX = Math.min(...values.map((point) => point.x));
+      const maxX = Math.max(...values.map((point) => point.x));
+      const minY = Math.min(...values.map((point) => point.y));
+      const maxY = Math.max(...values.map((point) => point.y));
+      const coordinates = values.map((point) => `${40 + ((point.x - minX) / (maxX - minX || 1)) * 300},${135 - ((point.y - minY) / (maxY - minY || 1)) * 100}`).join(' ');
+      return `<figure class="lesson-visual lesson-visual-chart"><svg viewBox="0 0 380 170" role="img" aria-label="${escapeHtml(alt)}"><path d="M40 20V135H350" fill="none" stroke="currentColor" stroke-opacity=".35"/><polyline points="${coordinates}" fill="none" stroke="var(--cyan)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg><figcaption>${escapeHtml(alt)}</figcaption></figure>`;
+    }
+  }
+  return `<p class="lesson-visual-fallback">${escapeHtml(fallback)}</p>`;
+}
+
+function renderLessonFormula(content) {
+  const formulas = content.formulas || content.formula;
+  if (!formulas) return '';
+  const values = Array.isArray(formulas) ? formulas : [formulas];
+  return `<div class="lesson-formulas" aria-label="Формулы урока">${values.map((formula) => `<code>${escapeHtml(formula)}</code>`).join('')}</div>`;
+}
+
 function renderLesson() {
   const lesson = currentLesson();
   if (!lesson) return;
@@ -252,10 +285,11 @@ function renderLesson() {
   const misconceptions = content.misconceptions || [];
   const summary = content.summary || ['Разберите пример', 'Проверьте себя', 'Сделайте практическое упражнение'];
   const lessonPlan = content.sequence || ['Интуиция', 'Визуализация', 'Формальное объяснение', 'Ручной пример', 'Код', 'Лаборатория', 'Проверка понимания'];
-  const visualization = content.visualization?.fallback || 'Схема и маленький численный пример помогают связать формулу с наблюдаемым поведением.';
+  const visualization = renderLessonVisualization(content);
+  const formulas = renderLessonFormula(content);
   const remediation = content.remediation?.if_wrong || 'Вернитесь к предыдущему уроку и повторите ручной пример.';
   const lessonLinks = `<div class="lesson-related-links"><span>Связи урока</span>${previous ? `<button class="text-button" data-action="open-lesson" data-lesson-id="${escapeHtml(previous.id)}">← ${escapeHtml(previous.id)} · ${escapeHtml(lessonTitle(previous))}</button>` : '<span>Это первый урок курса</span>'}${next ? `<button class="text-button" data-action="open-lesson" data-lesson-id="${escapeHtml(next.id)}">${escapeHtml(next.id)} · ${escapeHtml(lessonTitle(next))} →</button>` : '<span>Это последний урок курса</span>'}</div>`;
-  $('#lesson-content').innerHTML = `<div class="lesson-content-header"><div><span class="panel-kicker">ЛЕКЦИЯ · УРОК ${escapeHtml(lesson.id)}</span><h2>${escapeHtml(title)}</h2></div><span class="lesson-duration">${content.duration_minutes || lesson.duration_minutes || '—'} мин</span></div><div class="lesson-content-actions"><button class="button button-primary" data-action="lesson-lab">Открыть лабораторию ↓</button><button class="button button-ghost" data-action="lesson-tasks">Перейти к проверке →</button></div><details class="lesson-plan"><summary>План урока</summary><ol>${list(lessonPlan, ['Интуиция', 'Практика', 'Проверка понимания'])}</ol></details><div class="lesson-lecture-grid"><div><h3>Что уже известно</h3><ul>${list(known, ['Базовые понятия предыдущих уроков'])}</ul><h3>Цели урока</h3><ul>${list(objectives, ['Понять основную идею темы', 'Применить её в практике'])}</ul><h3>Интуиция</h3><p>${escapeHtml(content.intuition || 'Сначала сформулируйте идею своими словами, затем проверьте её на маленьком примере.')}</p><h3>Визуализация</h3><p>${escapeHtml(visualization)}</p><h3>Формальное объяснение</h3><p>${escapeHtml(content.formal_explanation || 'Свяжите обозначения, входы, выходы и ограничение метода.')}</p></div><div><h3>Почему это важно</h3><p>${escapeHtml(content.why_it_matters || 'Эта тема связывает фундаментальные понятия с рабочими ML/AI-сценариями.')}</p><h3>Ручной пример</h3><p>${escapeHtml(content.manual_example || 'Решите небольшой пример вручную и проверьте численный результат.')}</p><h3>Типичные заблуждения</h3><ul>${list(misconceptions, ['Не подменяйте интуицию формальным условием.', 'Проверяйте результат на новых данных.'])}</ul><h3>Мини-тест</h3><p>Идентификатор проверки <strong>${escapeHtml(content.mini_test || lesson.assessment || 'после лекции')}</strong>. После ответа разберите причину ошибки.</p><h3>Если ответ неверен</h3><p>${escapeHtml(remediation)}</p><h3>Короткое резюме</h3><ul>${list(summary, ['Повторите ключевую идею', 'Сделайте практическое упражнение'])}</ul></div></div>${content.code_example ? `<details class="lesson-code"><summary>Пример кода</summary><pre><code>${escapeHtml(content.code_example)}</code></pre></details>` : ''}${lessonLinks}<div class="lesson-content-footer"><span>Лаборатория <strong>${escapeHtml(labKindLabel(labKind(content, lesson)))}</strong></span><span>Упражнение <strong>${escapeHtml(content.independent_exercise || lesson.exercise_id || 'практика')}</strong></span><button class="text-button" data-action="lesson-exam">Открыть экзамен →</button></div>`;
+  $('#lesson-content').innerHTML = `<div class="lesson-content-header"><div><span class="panel-kicker">ЛЕКЦИЯ · УРОК ${escapeHtml(lesson.id)}</span><h2>${escapeHtml(title)}</h2></div><span class="lesson-duration">${content.duration_minutes || lesson.duration_minutes || '—'} мин</span></div><div class="lesson-content-actions"><button class="button button-primary" data-action="lesson-lab">Открыть лабораторию ↓</button><button class="button button-ghost" data-action="lesson-tasks">Перейти к проверке →</button></div><details class="lesson-plan"><summary>План урока</summary><ol>${list(lessonPlan, ['Интуиция', 'Практика', 'Проверка понимания'])}</ol></details><div class="lesson-lecture-grid"><div><h3>Что уже известно</h3><ul>${list(known, ['Базовые понятия предыдущих уроков'])}</ul><h3>Цели урока</h3><ul>${list(objectives, ['Понять основную идею темы', 'Применить её в практике'])}</ul><h3>Интуиция</h3><p>${escapeHtml(content.intuition || 'Сначала сформулируйте идею своими словами, затем проверьте её на маленьком примере.')}</p><h3>Визуализация</h3>${visualization}<h3>Формальное объяснение</h3><p>${escapeHtml(content.formal_explanation || 'Свяжите обозначения, входы, выходы и ограничение метода.')}</p>${formulas}</div><div><h3>Почему это важно</h3><p>${escapeHtml(content.why_it_matters || 'Эта тема связывает фундаментальные понятия с рабочими ML/AI-сценариями.')}</p><h3>Ручной пример</h3><p>${escapeHtml(content.manual_example || 'Решите небольшой пример вручную и проверьте численный результат.')}</p><h3>Типичные заблуждения</h3><ul>${list(misconceptions, ['Не подменяйте интуицию формальным условием.', 'Проверяйте результат на новых данных.'])}</ul><h3>Мини-тест</h3><p>Идентификатор проверки <strong>${escapeHtml(content.mini_test || lesson.assessment || 'после лекции')}</strong>. После ответа разберите причину ошибки.</p><h3>Если ответ неверен</h3><p>${escapeHtml(remediation)}</p><h3>Короткое резюме</h3><ul>${list(summary, ['Повторите ключевую идею', 'Сделайте практическое упражнение'])}</ul></div></div>${content.code_example ? `<details class="lesson-code"><summary>Пример кода</summary><pre><code>${escapeHtml(content.code_example)}</code></pre></details>` : ''}${lessonLinks}<div class="lesson-content-footer"><span>Лаборатория <strong>${escapeHtml(labKindLabel(labKind(content, lesson)))}</strong></span><span>Упражнение <strong>${escapeHtml(content.independent_exercise || lesson.exercise_id || 'практика')}</strong></span><button class="text-button" data-action="lesson-exam">Открыть экзамен →</button></div>`;
   persist();
   renderPathState();
   renderInteractiveLab(content, lesson);
