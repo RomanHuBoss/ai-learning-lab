@@ -801,6 +801,7 @@ async function authRequest(mode) {
     }
     localStorage.setItem('ailab:token', result.access_token);
     applyUserState(result.user);
+    closeModal();
     await loadCurrentUser();
     closeModal();
     output.className = 'question-feedback good'; output.textContent = `Вход выполнен. Роль: ${result.user.role}. Прогресс можно сохранять в PostgreSQL.`;
