@@ -38,7 +38,9 @@ def test_enrollment_exam_attempt_and_audit_flow():
     started = client.post(f"/api/exams/{exam_id}/start", headers=headers)
     assert started.status_code == 200
     attempt_id = started.json()["attempt_id"]
-    submitted = client.post(f"/api/attempts/{attempt_id}/submit", headers=headers, json={"answers": {"q-001": "значение, к которому можно обратиться по имени"}})
+    question_bank = json.loads(Path("data/questions.json").read_text(encoding="utf-8"))
+    q001 = next(item for item in question_bank if item["id"] == "q-001")
+    submitted = client.post(f"/api/attempts/{attempt_id}/submit", headers=headers, json={"answers": {"q-001": q001["answer"]}})
     assert submitted.status_code == 200
     assert submitted.json()["passed"] is True
     profile = client.get("/api/profile/me", headers=headers).json()
