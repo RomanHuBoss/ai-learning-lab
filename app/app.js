@@ -20,6 +20,7 @@ const state = {
   selectedAnswer: null,
   selectedTerm: null,
   taskQuestion: null,
+  taskStats: (() => { try { return JSON.parse(localStorage.getItem('ailab:task-stats') || '{"answered":0,"correct":0,"lastWrong":false}'); } catch { return {answered: 0, correct: 0, lastWrong: false}; } })(),
   exam: {attemptId: null, questions: []},
   tooltips: new Map(),
   modalReturnFocus: null
@@ -82,8 +83,17 @@ function renderPathState() {
   const completed = Math.round(Math.max(0, Math.min(100, state.progress)) * 36 / 100);
   const pathProgress = $('#path-progress');
   const pathModule = $('#path-module');
+  const paceValue = $('#path-pace-value');
+  const paceNote = $('#path-pace-note');
+  const milestoneValue = $('#path-milestone-value');
+  const milestoneNote = $('#path-milestone-note');
   if (pathProgress) pathProgress.textContent = `${completed} / 36`;
   if (pathModule) pathModule.textContent = String(Math.min(9, Math.floor(completed / 4) + 1)).padStart(2, '0');
+  const completedLessons = state.completedLessons?.length || 0;
+  if (paceValue) paceValue.textContent = '—';
+  if (paceNote) paceNote.textContent = completedLessons ? 'История темпа ещё не накоплена' : 'Недостаточно данных для расчёта';
+  if (milestoneValue) milestoneValue.textContent = completedLessons ? String(Math.max(0, 4 - (completedLessons % 4 || 4))) : '—';
+  if (milestoneNote) milestoneNote.textContent = completedLessons ? 'уроков до следующего модуля' : 'Появится после первой проверки';
   renderPathGraph();
   const graphNodes = $$('.graph-node[data-lesson-id]');
   if (!graphNodes.length) return;
@@ -163,6 +173,8 @@ function applyUserState(user) {
     state.mastery = {};
     state.nextReview = [];
     state.lessonId = '1.01';
+    state.taskStats = {answered: 0, correct: 0, lastWrong: false};
+    localStorage.removeItem('ailab:task-stats');
     persist();
   }
   if (!user && (state.view === 'mentor' || state.view === 'admin')) setView('dashboard');
@@ -1008,6 +1020,23 @@ function chooseAnswer(button) {
   $$('.answer').forEach((answer) => answer.classList.toggle('selected', answer === button));
 }
 
+function renderTaskStats() {
+  const content = $('#task-stats-content');
+  const remediation = $('#task-remediation');
+  if (content) {
+    const {answered, correct} = state.taskStats;
+    content.innerHTML = answered ? `<div class="concept-stat"><div><span>Ответы</span><strong>${correct} / ${answered}</strong></div><div class="mini-track"><span style="width:${Math.round(correct / answered * 100)}%"></span></div></div><p class="metric-note">Точность ${Math.round(correct / answered * 100)}% по сохранённым ответам</p>` : 'Статистика появится после первого ответа.';
+  }
+  if (remediation) {
+    remediation.hidden = !state.taskStats.lastWrong;
+    if (state.taskStats.lastWrong) {
+      const lesson = currentLesson();
+      const title = state.lessonContent.get(lesson?.id)?.title || lesson?.title || 'текущий урок';
+      remediation.innerHTML = `<span class="panel-kicker">ПОВТОРЕНИЕ И ПРОРАБОТКА</span><h3>Вернитесь к теме</h3><p>Повторите объяснение и ручной пример урока «${escapeHtml(title)}».</p><button class="text-button" data-action="open-lesson" data-lesson-id="${escapeHtml(lesson?.id || '1.01')}">Открыть урок <span>→</span></button>`;
+    }
+  }
+}
+
 function checkAnswer() {
   const feedback = $('#question-feedback');
   const input = $('#task-free-answer');
@@ -1015,7 +1044,13 @@ function checkAnswer() {
   const expected = state.taskQuestion?.answer;
   if (!selected) { feedback.className = 'question-feedback bad'; feedback.textContent = 'Введите или выберите ответ, затем нажмите «Проверить ответ».'; return; }
   $$('.answer').forEach((answer) => { answer.classList.remove('correct', 'wrong'); if (answer.dataset.answer === String(expected)) answer.classList.add('correct'); if (answer.dataset.answer === selected && String(expected) !== selected) answer.classList.add('wrong'); });
-  if (String(expected).trim().toLowerCase() === String(selected).trim().toLowerCase()) { feedback.className = 'question-feedback good'; feedback.textContent = state.taskQuestion?.solution || 'Верно. Разберите, почему этот ответ следует из лекции.'; $('#task-score').textContent = '1 / 1'; showToast('Ответ принят · +10 XP', 'success'); }
+  const isCorrect = String(expected).trim().toLowerCase() === String(selected).trim().toLowerCase();
+  state.taskStats.answered += 1;
+  state.taskStats.correct += isCorrect ? 1 : 0;
+  state.taskStats.lastWrong = !isCorrect;
+  localStorage.setItem('ailab:task-stats', JSON.stringify(state.taskStats));
+  renderTaskStats();
+  if (isCorrect) { feedback.className = 'question-feedback good'; feedback.textContent = state.taskQuestion?.solution || 'Верно. Разберите, почему этот ответ следует из лекции.'; $('#task-score').textContent = '1 / 1'; showToast('Ответ принят · +10 XP', 'success'); }
   else { feedback.className = 'question-feedback bad'; feedback.textContent = state.taskQuestion?.solution ? `Пока нет. Подсказка: ${state.taskQuestion.solution}` : 'Пока нет. Вернитесь к лекции и повторите пример.'; $('#task-score').textContent = '0 / 1'; }
 }
 
@@ -1286,4 +1321,4 @@ $$('[data-tooltip]').forEach((element) => {
   if (!element.getAttribute('aria-label')) element.setAttribute('aria-label', `Подсказка. ${element.dataset.tooltip}`);
   element.title = element.dataset.tooltip;
 });
-applyTheme(); applyTypography(); renderDashboardDate(); renderProgress(); setView(state.view); renderTerms(); loadTerms(); loadLessons(); loadCurrentUser(); drawLab();
+applyTheme(); applyTypography(); renderDashboardDate(); renderProgress(); renderTaskStats(); setView(state.view); renderTerms(); loadTerms(); loadLessons(); loadCurrentUser(); drawLab();
