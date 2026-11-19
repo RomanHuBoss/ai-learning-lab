@@ -168,6 +168,17 @@ function renderDashboardDate() {
 
 function applyUserState(user) {
   state.currentUser = user || null;
+  if (user) {
+    // Server records are the source of truth for an authenticated profile.
+    // Clear browser-only values before profile requests resolve so a previous
+    // account cannot flash in the dashboard.
+    state.progress = 0;
+    state.completedLessons = [];
+    state.mastery = {};
+    state.nextReview = [];
+    state.taskStats = {answered: 0, correct: 0, lastWrong: false};
+    localStorage.removeItem('ailab:task-stats');
+  }
   if (!user) {
     state.progress = 0;
     state.completedLessons = [];
@@ -668,14 +679,6 @@ function updateGenericLab() {
     const validationError = 0.16 + 0.025 * Math.pow(depth - 3, 2) + (depth > 5 ? 0.02 * (depth - 5) : 0);
     const leaves = Math.min(2 ** depth, 32);
     result.textContent = `Глубина ${depth} · ${leaves} возможных листьев · ошибка обучения ${(trainError * 100).toFixed(1).replace('.', ',')}% · ошибка проверки ${(validationError * 100).toFixed(1).replace('.', ',')}%`;
-  } else if (kind === 'tree-depth') {
-    const depth = Number(value('depth', 3));
-    const trainError = 0.03 + 0.42 * Math.exp(-0.58 * (depth - 1));
-    const validationError = 0.18 + 0.02 * (depth - 3) ** 2;
-    const recommendation = depth <= 3 ? 'модель ещё проста, но хорошо обобщает' : depth <= 5 ? 'баланс сложности и обобщения' : 'риск переобучения растёт';
-    const output = generic.querySelector('[data-lab-output="depth"]');
-    if (output) output.textContent = String(depth);
-    result.textContent = `Глубина ${depth}: ошибка обучения ${(trainError * 100).toFixed(1).replace('.', ',')}%, ошибка проверки ${(validationError * 100).toFixed(1).replace('.', ',')}% · ${recommendation}.`;
   } else {
     const input = generic.querySelector('[data-lab-input]');
     const output = generic.querySelector('[data-lab-output]');
