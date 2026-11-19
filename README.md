@@ -74,7 +74,7 @@ api/models.py         SQLAlchemy сущности пользователей, г
 api/auth.py           Argon2/JWT authentication и role guards
 data/                 versioned контент
 data/full_program.json расширенная карта 25 модулей и 100 уроков
-data/lesson_content.json обязательные блоки 49 уроков вертикального среза
+data/lesson_content.json обязательные блоки для всех 100 уроков курса
 data/labs.json        каталог из 26 вычисляемых лабораторий
 infra/Caddyfile       reverse proxy и security headers
 scripts/backup.sh     резервная копия PostgreSQL

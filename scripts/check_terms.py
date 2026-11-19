@@ -82,8 +82,12 @@ def main() -> int:
     if len(labs) < 26:
         errors.append("labs.json must contain at least 26 labs")
     required_lesson_blocks = {"learning_objectives", "what_is_known", "intuition", "visualization", "formal_explanation", "manual_example", "code_example", "interactive_lab", "independent_exercise", "misconceptions", "mini_test", "summary", "remediation", "spaced_repetition"}
-    if len(lesson_content) != 49:
-        errors.append("lesson_content.json must contain 49 vertical-slice lessons")
+    if len(lesson_content) != 100:
+        errors.append("lesson_content.json must contain all 100 course lessons")
+    program_ids = {str(lesson.get("id", "")).lstrip("0") for lesson in full_program.get("lessons", [])}
+    content_ids = {str(lesson.get("lesson_id", "")).lstrip("0") for lesson in lesson_content}
+    if program_ids != content_ids:
+        errors.append("lesson_content.json ids must match full_program.json")
     for lesson in lesson_content:
         missing = required_lesson_blocks - lesson.keys()
         if missing:
@@ -92,7 +96,7 @@ def main() -> int:
         print("CONTENT LINT FAILED")
         print("\n".join(f"- {error}" for error in errors))
         return 1
-    print(f"CONTENT LINT OK · {len(terms)} terms · {len(curriculum['lessons'])} lessons · prerequisite graph acyclic")
+    print(f"CONTENT LINT OK · {len(terms)} terms · {len(full_program['lessons'])} lessons · prerequisite graph acyclic")
     return 0
 
 

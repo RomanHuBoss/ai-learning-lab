@@ -37,7 +37,7 @@ def test_full_program_and_lab_catalog_are_substantive():
     assert len(program["lessons"]) == 100
     assert len(labs) >= 26
     assert len(questions) >= 250
-    assert len(lesson_content) == 49
+    assert len(lesson_content) == 100
     assert all(content["learning_objectives"] and content["mini_test"] for content in lesson_content)
     assert any(lab["id"] == "graph-message-passing" for lab in labs)
     assert any(lab["id"] == "hardware-selector" for lab in labs)

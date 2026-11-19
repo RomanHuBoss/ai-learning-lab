@@ -250,7 +250,7 @@ function renderLesson() {
   const misconceptions = content.misconceptions || [];
   const summary = content.summary || ['Разберите пример', 'Проверьте себя', 'Сделайте практическое упражнение'];
   const visualization = content.visualization?.fallback || 'Схема и маленький численный пример помогают связать формулу с наблюдаемым поведением.';
-  const remediation = content.remediation?.if_wrong || 'Вернитесь к prerequisite и повторите ручной пример.';
+  const remediation = content.remediation?.if_wrong || 'Вернитесь к предыдущему уроку и повторите ручной пример.';
   $('#lesson-content').innerHTML = `<div class="lesson-content-header"><div><span class="panel-kicker">ЛЕКЦИЯ · УРОК ${escapeHtml(lesson.id)}</span><h2>${escapeHtml(title)}</h2></div><span class="lesson-duration">${content.duration_minutes || lesson.duration_minutes || '—'} мин</span></div><div class="lesson-content-actions"><button class="button button-primary" data-action="lesson-lab">Открыть лабораторию ↓</button><button class="button button-ghost" data-action="lesson-tasks">Перейти к проверке →</button></div><div class="lesson-lecture-grid"><div><h3>Что уже известно</h3><ul>${list(known, ['Базовые понятия предыдущих уроков'])}</ul><h3>Цели урока</h3><ul>${list(objectives, ['Понять основную идею темы', 'Применить её в практике'])}</ul><h3>Интуиция</h3><p>${escapeHtml(content.intuition || 'Сначала сформулируйте идею своими словами, затем проверьте её на маленьком примере.')}</p><h3>Визуализация</h3><p>${escapeHtml(visualization)}</p><h3>Формальное объяснение</h3><p>${escapeHtml(content.formal_explanation || 'Свяжите обозначения, входы, выходы и ограничение метода.')}</p></div><div><h3>Почему это важно</h3><p>${escapeHtml(content.why_it_matters || 'Эта тема связывает фундаментальные понятия с рабочими ML/AI-сценариями.')}</p><h3>Ручной пример</h3><p>${escapeHtml(content.manual_example || 'Решите небольшой пример вручную и проверьте численный результат.')}</p><h3>Типичные заблуждения</h3><ul>${list(misconceptions, ['Не подменяйте интуицию формальным условием.', 'Проверяйте результат на новых данных.'])}</ul><h3>Мини-тест</h3><p>Идентификатор проверки <strong>${escapeHtml(content.mini_test || lesson.assessment || 'после лекции')}</strong>. После ответа разберите причину ошибки.</p><h3>Если ответ неверен</h3><p>${escapeHtml(remediation)}</p><h3>Короткое резюме</h3><ul>${list(summary, ['Повторите ключевую идею', 'Сделайте практическое упражнение'])}</ul></div></div>${content.code_example ? `<details class="lesson-code"><summary>Пример кода</summary><pre><code>${escapeHtml(content.code_example)}</code></pre></details>` : ''}<div class="lesson-content-footer"><span>Лаборатория <strong>${escapeHtml(labKindLabel(labKind(content, lesson)))}</strong></span><span>Упражнение <strong>${escapeHtml(content.independent_exercise || lesson.exercise_id || 'практика')}</strong></span><button class="text-button" data-action="lesson-exam">Открыть экзамен →</button></div>`;
   persist();
   renderPathState();
@@ -284,6 +284,22 @@ const labKindLabels = {
   'metric-choice': 'Выбор метрики',
   'hardware-selector': 'Подбор оборудования',
   'memory-budget': 'Бюджет памяти',
+  'concept-map': 'Связи понятий',
+  'pipeline-sort': 'Конвейер данных',
+  'classification-boundary': 'Граница классификации',
+  'tree-depth': 'Глубина дерева',
+  'confusion-matrix': 'Матрица ошибок',
+  'forward-pass': 'Прямой проход',
+  'backprop': 'Обратное распространение',
+  'convolution': 'Свёртка',
+  'transformer-flow': 'Поток трансформера',
+  'tokenization': 'Токенизация',
+  'attention-map': 'Карта внимания',
+  'embedding-space': 'Пространство представлений',
+  'api-design': 'Проектирование API',
+  'sandbox': 'Безопасная песочница',
+  'experiment-tracker': 'Трекер экспериментов',
+  'project-defense': 'Защита проекта',
   'guided-practice': 'Практика по теме'
 };
 
