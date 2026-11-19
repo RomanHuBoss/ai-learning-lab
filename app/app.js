@@ -251,7 +251,7 @@ function renderLesson() {
   const summary = content.summary || ['Разберите пример', 'Проверьте себя', 'Сделайте практическое упражнение'];
   const visualization = content.visualization?.fallback || 'Схема и маленький численный пример помогают связать формулу с наблюдаемым поведением.';
   const remediation = content.remediation?.if_wrong || 'Вернитесь к prerequisite и повторите ручной пример.';
-  $('#lesson-content').innerHTML = `<div class="lesson-content-header"><div><span class="panel-kicker">ЛЕКЦИЯ · УРОК ${escapeHtml(lesson.id)}</span><h2>${escapeHtml(title)}</h2></div><span class="lesson-duration">${content.duration_minutes || lesson.duration_minutes || '—'} мин</span></div><div class="lesson-content-actions"><button class="button button-primary" data-action="lesson-lab">Открыть лабораторию ↓</button><button class="button button-ghost" data-action="lesson-tasks">Перейти к проверке →</button></div><div class="lesson-lecture-grid"><div><h3>Что уже известно</h3><ul>${list(known, ['Базовые понятия предыдущих уроков'])}</ul><h3>Цели урока</h3><ul>${list(objectives, ['Понять основную идею темы', 'Применить её в практике'])}</ul><h3>Интуиция</h3><p>${escapeHtml(content.intuition || 'Сначала сформулируйте идею своими словами, затем проверьте её на маленьком примере.')}</p><h3>Визуализация</h3><p>${escapeHtml(visualization)}</p><h3>Формальное объяснение</h3><p>${escapeHtml(content.formal_explanation || 'Свяжите обозначения, входы, выходы и ограничение метода.')}</p></div><div><h3>Почему это важно</h3><p>${escapeHtml(content.why_it_matters || 'Эта тема связывает фундаментальные понятия с рабочими ML/AI-сценариями.')}</p><h3>Ручной пример</h3><p>${escapeHtml(content.manual_example || 'Решите небольшой пример вручную и проверьте численный результат.')}</p><h3>Типичные заблуждения</h3><ul>${list(misconceptions, ['Не подменяйте интуицию формальным условием.', 'Проверяйте результат на новых данных.'])}</ul><h3>Мини-тест</h3><p>Идентификатор проверки <strong>${escapeHtml(content.mini_test || lesson.assessment || 'после лекции')}</strong>. После ответа разберите причину ошибки.</p><h3>Если ответ неверен</h3><p>${escapeHtml(remediation)}</p><h3>Короткое резюме</h3><ul>${list(summary, ['Повторите ключевую идею', 'Сделайте практическое упражнение'])}</ul></div></div>${content.code_example ? `<details class="lesson-code"><summary>Пример кода</summary><pre><code>${escapeHtml(content.code_example)}</code></pre></details>` : ''}<div class="lesson-content-footer"><span>Лаборатория <strong>${escapeHtml(content.interactive_lab || lesson.lab || 'практика')}</strong></span><span>Упражнение <strong>${escapeHtml(content.independent_exercise || lesson.exercise_id || 'практика')}</strong></span><button class="text-button" data-action="lesson-exam">Открыть экзамен →</button></div>`;
+  $('#lesson-content').innerHTML = `<div class="lesson-content-header"><div><span class="panel-kicker">ЛЕКЦИЯ · УРОК ${escapeHtml(lesson.id)}</span><h2>${escapeHtml(title)}</h2></div><span class="lesson-duration">${content.duration_minutes || lesson.duration_minutes || '—'} мин</span></div><div class="lesson-content-actions"><button class="button button-primary" data-action="lesson-lab">Открыть лабораторию ↓</button><button class="button button-ghost" data-action="lesson-tasks">Перейти к проверке →</button></div><div class="lesson-lecture-grid"><div><h3>Что уже известно</h3><ul>${list(known, ['Базовые понятия предыдущих уроков'])}</ul><h3>Цели урока</h3><ul>${list(objectives, ['Понять основную идею темы', 'Применить её в практике'])}</ul><h3>Интуиция</h3><p>${escapeHtml(content.intuition || 'Сначала сформулируйте идею своими словами, затем проверьте её на маленьком примере.')}</p><h3>Визуализация</h3><p>${escapeHtml(visualization)}</p><h3>Формальное объяснение</h3><p>${escapeHtml(content.formal_explanation || 'Свяжите обозначения, входы, выходы и ограничение метода.')}</p></div><div><h3>Почему это важно</h3><p>${escapeHtml(content.why_it_matters || 'Эта тема связывает фундаментальные понятия с рабочими ML/AI-сценариями.')}</p><h3>Ручной пример</h3><p>${escapeHtml(content.manual_example || 'Решите небольшой пример вручную и проверьте численный результат.')}</p><h3>Типичные заблуждения</h3><ul>${list(misconceptions, ['Не подменяйте интуицию формальным условием.', 'Проверяйте результат на новых данных.'])}</ul><h3>Мини-тест</h3><p>Идентификатор проверки <strong>${escapeHtml(content.mini_test || lesson.assessment || 'после лекции')}</strong>. После ответа разберите причину ошибки.</p><h3>Если ответ неверен</h3><p>${escapeHtml(remediation)}</p><h3>Короткое резюме</h3><ul>${list(summary, ['Повторите ключевую идею', 'Сделайте практическое упражнение'])}</ul></div></div>${content.code_example ? `<details class="lesson-code"><summary>Пример кода</summary><pre><code>${escapeHtml(content.code_example)}</code></pre></details>` : ''}<div class="lesson-content-footer"><span>Лаборатория <strong>${escapeHtml(labKindLabel(labKind(content, lesson)))}</strong></span><span>Упражнение <strong>${escapeHtml(content.independent_exercise || lesson.exercise_id || 'практика')}</strong></span><button class="text-button" data-action="lesson-exam">Открыть экзамен →</button></div>`;
   persist();
   renderPathState();
   renderInteractiveLab(content, lesson);
@@ -261,10 +261,34 @@ function labKind(content, lesson) {
   const value = content.interactive_lab || '';
   if (value) return value;
   const title = `${lesson.title || ''} ${lesson.description || ''}`.toLowerCase();
-  if (title.includes('граф') || title.includes('функц')) return 'function-plot';
-  if (title.includes('врем')) return 'time-series-split';
-  if (title.includes('граф')) return 'graph-playground';
+  if (/граф|узл|ребр|рекоменд/.test(title)) return 'graph-playground';
+  if (/рекур|lstm|gru|последоват|временн|lag|walk-forward/.test(title)) return 'rnn-flow';
+  if (/памят|контекст|токен|kv-/.test(title)) return 'memory-budget';
+  if (/вес|инференс|оборуд|gpu|vram|квантиз/.test(title)) return 'hardware-selector';
+  if (/метрик|accuracy|precision|recall|f1|качества|порог/.test(title)) return 'metric-choice';
+  if (/тензор|матриц|изображ|свёртк|convolution/.test(title)) return 'tensor-shapes';
+  if (/данн|пропуск|выброс|категор|таблиц|выборк|признак|кодиров/.test(title)) return 'data-cleaning';
+  if (/градиент|оптимизатор|перцептрон|распростран|sgd|adam|потер/.test(title)) return 'gradient-descent';
+  if (/функц|перемен|тип|python|услов|цик|код/.test(title)) return 'variable-playground';
   return 'guided-practice';
+}
+
+const labKindLabels = {
+  'variable-playground': 'Переменные и выражения',
+  'data-cleaning': 'Очистка данных',
+  'function-plot': 'График функции',
+  'gradient-descent': 'Градиентный спуск',
+  'tensor-shapes': 'Формы тензоров',
+  'graph-playground': 'Графовые представления',
+  'rnn-flow': 'Рекуррентная последовательность',
+  'metric-choice': 'Выбор метрики',
+  'hardware-selector': 'Подбор оборудования',
+  'memory-budget': 'Бюджет памяти',
+  'guided-practice': 'Практика по теме'
+};
+
+function labKindLabel(kind) {
+  return labKindLabels[kind] || 'Практика по теме';
 }
 
 function renderInteractiveLab(content, lesson) {
@@ -293,11 +317,11 @@ function renderInteractiveLab(content, lesson) {
     'variable-playground': '<label class="generic-control">Измените x<input type="range" min="0" max="10" value="3" data-lab-input="x"><output data-lab-output="x">3</output></label><div class="generic-result" data-lab-result>Вычисление: x + 1 = 4</div>',
     'data-cleaning': '<label class="generic-control">Стратегия пропусков<select data-lab-input="missing"><option value="median">Заполнить медианой</option><option value="drop">Удалить строку</option></select></label><label class="generic-control">Обработать выброс<input type="checkbox" checked data-lab-input="outlier"></label><div class="generic-result" data-lab-result>После очистки: 3 строки, 0 пропусков, 0 выбросов</div>',
     'tensor-shapes': '<label class="generic-control">Размер batch<input type="number" min="1" max="128" value="2" data-lab-input="batch"></label><label class="generic-control">Каналы<input type="number" min="1" max="8" value="3" data-lab-input="channels"></label><div class="generic-result" data-lab-result>Форма [2, 3, 28, 28] · 4704 чисел</div>',
-    'metric-choice': '<label class="generic-control">Порог классификации<input type="range" min="0" max="100" value="50" data-lab-input="threshold"><output data-lab-output="threshold">0.50</output></label><div class="generic-result" data-lab-result>Precision 0.78 · Recall 0.71 · F1 0.74</div>',
-    'hardware-selector': '<label class="generic-control">Размер модели, млрд параметров<input type="range" min="1" max="70" value="7" data-lab-input="params"><output data-lab-output="params">7B</output></label><label class="generic-control">Квантизация<select data-lab-input="quant"><option value="16">FP16</option><option value="8">INT8</option><option value="4">INT4</option></select></label><div class="generic-result" data-lab-result>Оценка VRAM: 14 GB · подходит GPU 16 GB</div>',
-    'memory-budget': '<label class="generic-control">Контекст, токенов<input type="range" min="1024" max="32768" step="1024" value="8192" data-lab-input="context"><output data-lab-output="context">8192</output></label><div class="generic-result" data-lab-result>Память KV-cache: 1.2 GB · запас: 4.8 GB</div>',
+    'metric-choice': '<label class="generic-control">Порог классификации<input type="range" min="0" max="100" value="50" data-lab-input="threshold"><output data-lab-output="threshold">0.50</output></label><div class="generic-result" data-lab-result>Точность 0.78 · полнота 0.71 · F1 0.74</div>',
+    'hardware-selector': '<label class="generic-control">Размер модели, млрд параметров<input type="range" min="1" max="70" value="7" data-lab-input="params"><output data-lab-output="params">7 млрд</output></label><label class="generic-control">Квантизация<select data-lab-input="quant"><option value="16">FP16</option><option value="8">INT8</option><option value="4">INT4</option></select></label><div class="generic-result" data-lab-result>Оценка видеопамяти: 14 ГБ · подходит видеокарта с 16 ГБ</div>',
+    'memory-budget': '<label class="generic-control">Контекст, токенов<input type="range" min="1024" max="32768" step="1024" value="8192" data-lab-input="context"><output data-lab-output="context">8192</output></label><div class="generic-result" data-lab-result>Память KV-кэша: 1,2 ГБ · запас: 4,8 ГБ</div>',
   }[kind] || '<label class="generic-control">Интенсивность опыта<input type="range" min="0" max="100" value="50" data-lab-input="intensity"><output data-lab-output="intensity">50</output></label><button class="button button-primary" data-action="generic-lab-run">Запустить опыт</button><div class="generic-result" data-lab-result>Готово к запуску. Измените параметр и проверьте гипотезу.</div>';
-  generic.innerHTML = `<div class="generic-lab-header"><div><span class="generic-lab-kind">ИНТЕРАКТИВНАЯ ЛАБОРАТОРИЯ · ${escapeHtml(kind)}</span><h2>${escapeHtml(title)}</h2><p>${escapeHtml(description)}</p></div><button class="button button-primary" data-action="generic-lab-run">Запустить опыт</button></div><div class="generic-lab-body"><div class="generic-visual">${visual}</div><div class="generic-controls">${controls}</div></div><div class="generic-lab-footer"><span>Связанные понятия: ${(content.learning_objectives || lesson.objectives || []).slice(0, 3).map(escapeHtml).join(' · ')}</span><span>Проверка после опыта — кнопка «Перейти к проверке» выше</span></div>`;
+  generic.innerHTML = `<div class="generic-lab-header"><div><span class="generic-lab-kind">ИНТЕРАКТИВНАЯ ЛАБОРАТОРИЯ · ${escapeHtml(labKindLabel(kind))}</span><h2>${escapeHtml(title)}</h2><p>${escapeHtml(description)}</p></div><button class="button button-primary" data-action="generic-lab-run">Запустить опыт</button></div><div class="generic-lab-body"><div class="generic-visual">${visual}</div><div class="generic-controls">${controls}</div></div><div class="generic-lab-footer"><span>Связанные понятия: ${(content.learning_objectives || lesson.objectives || []).slice(0, 3).map(escapeHtml).join(' · ')}</span><span>Проверка после опыта — кнопка «Перейти к проверке» выше</span></div>`;
   updateGenericLab();
 }
 
@@ -321,17 +345,17 @@ function updateGenericLab() {
     const precision = (0.58 + threshold / 250).toFixed(2);
     const recall = (0.95 - threshold / 250).toFixed(2);
     const f1 = (2 * precision * recall / (Number(precision) + Number(recall))).toFixed(2);
-    result.textContent = `Precision ${precision} · Recall ${recall} · F1 ${f1}`;
+    result.textContent = `Точность ${precision} · полнота ${recall} · F1 ${f1}`;
   } else if (kind === 'hardware-selector') {
     const params = Number(value('params', 7));
     const quant = Number(value('quant', 16));
     const vram = (params * quant / 8).toFixed(1);
-    generic.querySelector('[data-lab-output="params"]').textContent = `${params}B`;
-    result.textContent = `Оценка VRAM: ${vram} GB · ${vram <= 16 ? 'подходит GPU 16 GB' : 'нужен GPU с большей памятью'}`;
+    generic.querySelector('[data-lab-output="params"]').textContent = `${params} млрд`;
+    result.textContent = `Оценка видеопамяти: ${vram} ГБ · ${vram <= 16 ? 'подходит видеокарта с 16 ГБ' : 'нужна видеокарта с большей памятью'}`;
   } else if (kind === 'memory-budget') {
     const context = Number(value('context', 8192));
     generic.querySelector('[data-lab-output="context"]').textContent = String(context);
-    result.textContent = `Память KV-cache: ${(context / 6800).toFixed(1)} GB · запас ${(8 - context / 6800).toFixed(1)} GB`;
+    result.textContent = `Память KV-кэша: ${(context / 6800).toFixed(1).replace('.', ',')} ГБ · запас ${(8 - context / 6800).toFixed(1).replace('.', ',')} ГБ`;
   } else if (kind === 'data-cleaning') {
     const missing = value('missing', 'median');
     const outlier = generic.querySelector('[data-lab-input="outlier"]')?.checked;
