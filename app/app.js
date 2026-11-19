@@ -353,7 +353,7 @@ function renderLesson() {
   const objectives = content.learning_objectives || lesson.objectives || ['Понять основную идею темы', 'Применить её в практике'];
   const misconceptions = content.misconceptions || [];
   const summary = content.summary || ['Разберите пример', 'Проверьте себя', 'Сделайте практическое упражнение'];
-  const lessonPlan = content.sequence || ['Интуиция', 'Визуализация', 'Формальное объяснение', 'Ручной пример', 'Код', 'Лаборатория', 'Проверка понимания'];
+  const lessonPlan = content.sequence?.length ? content.sequence : lesson.sequence?.length ? lesson.sequence : ['Интуиция', 'Визуализация', 'Формальное объяснение', 'Ручной пример', 'Код', 'Лаборатория', 'Проверка понимания'];
   const visualization = renderLessonVisualization(content);
   const formulas = renderLessonFormula(content);
   const remediation = content.remediation?.if_wrong || 'Вернитесь к предыдущему уроку и повторите ручной пример.';
