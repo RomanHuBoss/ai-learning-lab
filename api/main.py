@@ -567,9 +567,10 @@ def export_mentor_cohort(cohort_id: int, user: User = Depends(get_current_user),
 def admin_dashboard(user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> dict[str, Any]:
     if user.role != "admin":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Недостаточно прав")
-    profiles = list(db.scalars(select(Profile)).all())
-    recent_users = [{"id": item.id, "display_name": item.display_name, "email": item.email, "role": item.role} for item in db.scalars(select(User).order_by(User.created_at.desc()).limit(12)).all()]
-    return {"users": db.query(User).count(), "cohorts": db.query(Cohort).count(), "graduates": sum(profile.status == "graduate" for profile in profiles), "published_alumni": sum(profile.publish_in_catalog and profile.status == "graduate" for profile in profiles), "average_completion": round(sum(profile.completion_percent for profile in profiles) / len(profiles), 2) if profiles else 0, "recent_users": recent_users}
+    profiles = [profile for profile in db.scalars(select(Profile)).all() if profile.user.is_active]
+    catalog_profiles = [profile for profile in profiles if profile.status == "graduate" and profile.completion_percent >= 100 and profile.final_exam_passed and profile.publish_in_catalog and (profile.visibility and profile.visibility.scope == "catalog")]
+    recent_users = [{"id": item.id, "display_name": item.display_name, "email": item.email, "role": item.role} for item in db.scalars(select(User).where(User.is_active.is_(True)).order_by(User.created_at.desc()).limit(12)).all()]
+    return {"users": len(profiles), "cohorts": db.query(Cohort).count(), "graduates": sum(profile.status == "graduate" for profile in profiles), "published_alumni": len(catalog_profiles), "average_completion": round(sum(profile.completion_percent for profile in profiles) / len(profiles), 2) if profiles else 0, "recent_users": recent_users}
 
 
 @app.get("/api/admin/export/alumni.csv")

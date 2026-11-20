@@ -102,7 +102,7 @@ def main() -> int:
         "tensor-shapes", "graph-playground", "rnn-flow", "metric-choice", "hardware-selector",
         "memory-budget", "concept-map", "pipeline-sort", "classification-boundary", "tree-depth",
         "confusion-matrix", "forward-pass", "backprop", "convolution", "transformer-flow", "tokenization",
-        "attention-map", "embedding-space", "api-design", "sandbox", "experiment-tracker", "project-defense",
+        "attention-map", "embedding-space", "correlation-causality", "api-design", "sandbox", "experiment-tracker", "project-defense",
         "guided-practice",
     }
     content_by_id = {normalize_lesson_id(lesson.get("lesson_id")): lesson for lesson in lesson_content}

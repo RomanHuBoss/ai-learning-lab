@@ -68,7 +68,9 @@ def test_mentor_dashboard_and_admin_export():
     with SessionLocal() as db:
         db.get(User, admin_id).role = "admin"
         db.commit()
-    assert client.get("/api/admin/dashboard", headers=admin_headers).status_code == 200
+    admin_dashboard = client.get("/api/admin/dashboard", headers=admin_headers)
+    assert admin_dashboard.status_code == 200
+    assert admin_dashboard.json()["users"] >= 2
     export = client.get("/api/admin/export/alumni.csv", headers=admin_headers)
     assert export.status_code == 200
     assert "display_name" in export.text

@@ -456,6 +456,13 @@ function currentLesson() {
   return state.lessons.find((lesson) => lesson.id === state.lessonId) || state.lessons[0] || fallbackLessons[0];
 }
 
+function syncLessonToProgress() {
+  if (!state.currentUser || !state.completedLessons.length || !state.lessons.length) return;
+  const completed = new Set(state.completedLessons.map(normalizeLessonId));
+  const nextLesson = state.lessons.find((lesson) => !completed.has(normalizeLessonId(lesson.id)));
+  state.lessonId = nextLesson?.id || normalizeLessonId(state.completedLessons.at(-1));
+}
+
 function normalizeLessonId(value) {
   return String(value || '').replace(/^0(?=\d\.)/, '');
 }
@@ -589,7 +596,7 @@ function renderLesson() {
   const visualization = renderLessonVisualization(content);
   const formulas = renderLessonFormula(content);
   const remediation = content.remediation?.if_wrong || 'Вернитесь к предыдущему уроку и повторите ручной пример.';
-  const lessonLinks = `<div class="lesson-related-links"><span>Навигация урока</span>${previous ? `<button class="text-button" data-action="open-lesson" data-lesson-id="${escapeHtml(previous.id)}">← Предыдущий урок · ${escapeHtml(lessonTitle(previous))}</button>` : '<span>Это первый урок курса</span>'}${next ? `<button class="text-button" data-action="open-lesson" data-lesson-id="${escapeHtml(next.id)}">Следующий урок · ${escapeHtml(lessonTitle(next))} →</button>` : '<span>Это последний урок курса</span>'}</div>`;
+  const lessonLinks = previous || next ? `<nav class="lesson-related-links" aria-label="Навигация урока">${previous ? `<button class="text-button" data-action="open-lesson" data-lesson-id="${escapeHtml(previous.id)}">← Предыдущий урок · ${escapeHtml(lessonTitle(previous))}</button>` : ''}${next ? `<button class="text-button" data-action="open-lesson" data-lesson-id="${escapeHtml(next.id)}">Следующий урок · ${escapeHtml(lessonTitle(next))} →</button>` : ''}</nav>` : '';
   const assessmentLink = `<button class="text-button lesson-inline-link" data-action="lesson-tasks">Пройти мини-тест к уроку →</button>`;
   $('#lesson-content').innerHTML = `<div class="lesson-content-header"><div><span class="panel-kicker">ЛЕКЦИЯ · УРОК ${escapeHtml(lesson.id)}</span><h2>${escapeHtml(title)}</h2></div><span class="lesson-duration">${content.duration_minutes || lesson.duration_minutes || '—'} мин</span></div><div class="lesson-content-actions"><button class="button button-primary" data-action="lesson-lab">Открыть лабораторию ↓</button><button class="button button-ghost" data-action="lesson-tasks">Перейти к проверке →</button></div><details class="lesson-plan"><summary>План урока</summary><ol>${list(lessonPlan, ['Интуиция', 'Визуализация', 'Практика', 'Проверка понимания'])}</ol></details><div class="lesson-lecture-grid"><div><h3>Что уже известно</h3><ul>${list(known, ['Базовые понятия предыдущих уроков'])}</ul><h3>Цели урока</h3><ul>${list(objectives, ['Понять основную идею темы', 'Применить её в практике'])}</ul><h3>Интуиция</h3><p>${escapeHtml(content.intuition || 'Сначала сформулируйте идею своими словами, затем проверьте её на маленьком примере.')}</p><h3>Визуализация</h3>${visualization}<h3>Формальное объяснение</h3><p>${escapeHtml(content.formal_explanation || 'Свяжите обозначения, входы, выходы и ограничение метода.')}</p>${formulas}</div><div><h3>Почему это важно</h3><p>${escapeHtml(content.why_it_matters || 'Эта тема связывает фундаментальные понятия с рабочими ML/AI-сценариями.')}</p><h3>Ручной пример</h3><p>${escapeHtml(content.manual_example || 'Решите небольшой пример вручную и проверьте численный результат.')}</p><h3>Типичные заблуждения</h3><ul>${list(misconceptions, ['Не подменяйте интуицию формальным условием.', 'Проверяйте результат на новых данных.'])}</ul><h3>Проверка понимания</h3><p>Ответьте на вопрос по этой лекции и разберите объяснение ошибки. ${assessmentLink}</p><h3>Если ответ неверен</h3><p>${escapeHtml(remediation)}</p><h3>Короткое резюме</h3><ul>${list(summary, ['Повторите ключевую идею', 'Сделайте практическое упражнение'])}</ul></div></div>${content.code_example ? `<details class="lesson-code"><summary>Пример кода</summary><pre><code>${escapeHtml(content.code_example)}</code></pre><button class="text-button lesson-code-runner" data-action="open-code-runner">Открыть этот пример в песочнице →</button></details>` : ''}${lessonLinks}<div class="lesson-content-footer"><button class="text-button" data-action="lesson-exam">Открыть страницу экзамена →</button></div>`;
   persist();
@@ -629,6 +636,8 @@ const labKindLabels = {
   'graph-playground': 'Графовые представления',
   'rnn-flow': 'Рекуррентная последовательность',
   'metric-choice': 'Выбор метрики',
+  'correlation-lab': 'Корреляция и причинность',
+  'correlation-causality': 'Корреляция и причинность',
   'hardware-selector': 'Подбор оборудования',
   'memory-budget': 'Бюджет памяти',
   'concept-map': 'Связи понятий',
@@ -678,6 +687,8 @@ function renderInteractiveLab(content, lesson) {
   const visual = {
     'variable-playground': '<table><thead><tr><th>Имя</th><th>Значение</th><th>Тип</th></tr></thead><tbody><tr><td>x</td><td id="generic-x-value">3</td><td>int</td></tr><tr><td>name</td><td>AI Lab</td><td>str</td></tr><tr><td>enabled</td><td>True</td><td>bool</td></tr></tbody></table>',
     'type-inspector': '<table><thead><tr><th>Значение</th><th>Тип</th><th>Доступная операция</th></tr></thead><tbody><tr><td>3</td><td>int</td><td>сложение</td></tr><tr><td>0,15</td><td>float</td><td>деление</td></tr><tr><td>[1, 2]</td><td>list</td><td>обход</td></tr></tbody></table>',
+    'correlation-lab': '<table><thead><tr><th>Наблюдение</th><th>Реклама x</th><th>Продажи y</th><th>Скрытый фактор z</th></tr></thead><tbody><tr><td>1</td><td>1</td><td>10</td><td>тёплый день</td></tr><tr><td>2</td><td>2</td><td>12</td><td>тёплый день</td></tr><tr><td>3</td><td>3</td><td>14</td><td>жара</td></tr><tr><td>4</td><td>4</td><td>16</td><td>жара</td></tr></tbody></table>',
+    'correlation-causality': '<table><thead><tr><th>Наблюдение</th><th>Реклама x</th><th>Продажи y</th><th>Скрытый фактор z</th></tr></thead><tbody><tr><td>1</td><td>1</td><td>10</td><td>тёплый день</td></tr><tr><td>2</td><td>2</td><td>12</td><td>тёплый день</td></tr><tr><td>3</td><td>3</td><td>14</td><td>жара</td></tr><tr><td>4</td><td>4</td><td>16</td><td>жара</td></tr></tbody></table>',
     'data-cleaning': '<table><thead><tr><th>row</th><th>value</th><th>status</th></tr></thead><tbody><tr><td>1</td><td>12.4</td><td>ok</td></tr><tr><td>2</td><td>—</td><td>missing</td></tr><tr><td>3</td><td>999.0</td><td>outlier</td></tr></tbody></table>',
     'tensor-shapes': '<svg viewBox="0 0 520 220" role="img" aria-label="Схема формы тензора"><rect x="60" y="45" width="150" height="110" rx="12" fill="rgba(125,211,252,.16)" stroke="#7dd3fc"/><rect x="250" y="72" width="150" height="56" rx="12" fill="rgba(167,139,250,.16)" stroke="#a78bfa"/><path d="M210 100h40" stroke="#67e8a5" stroke-width="4"/><text x="88" y="105" fill="currentColor">batch × channels × H × W</text><text x="277" y="105" fill="currentColor">2 × 3 × 28 × 28</text></svg>',
     'graph-playground': '<svg viewBox="0 0 520 220" role="img" aria-label="Граф с узлами и рёбрами"><path d="M110 110 L250 55 L400 115 L250 170 Z M110 110 L400 115" stroke="#7dd3fc" stroke-width="3" fill="none"/><circle cx="110" cy="110" r="24" fill="#17263c" stroke="#7dd3fc" stroke-width="3"/><circle cx="250" cy="55" r="24" fill="#17263c" stroke="#a78bfa" stroke-width="3"/><circle cx="400" cy="115" r="24" fill="#17263c" stroke="#67e8a5" stroke-width="3"/><circle cx="250" cy="170" r="24" fill="#17263c" stroke="#f4bf67" stroke-width="3"/><text x="103" y="116" fill="currentColor">A</text><text x="243" y="61" fill="currentColor">B</text><text x="393" y="121" fill="currentColor">C</text><text x="243" y="176" fill="currentColor">D</text></svg>',
@@ -709,6 +720,8 @@ function renderInteractiveLab(content, lesson) {
     'type-inspector': '<label class="generic-control">Выберите операцию<select data-lab-input="operation"><option>сложение чисел</option><option>обход списка</option><option>доступ по ключу</option></select></label><div class="generic-result" data-lab-result>Тип значения определяет допустимую операцию.</div>',
     'data-cleaning': '<label class="generic-control">Стратегия пропусков<select data-lab-input="missing"><option value="median">Заполнить медианой</option><option value="drop">Удалить строку</option></select></label><label class="generic-control">Обработать выброс<input type="checkbox" checked data-lab-input="outlier"></label><div class="generic-result" data-lab-result>После очистки: 3 строки, 0 пропусков, 0 выбросов</div>',
     'tensor-shapes': '<label class="generic-control">Размер batch<input type="number" min="1" max="128" value="2" data-lab-input="batch"></label><label class="generic-control">Каналы<input type="number" min="1" max="8" value="3" data-lab-input="channels"></label><div class="generic-result" data-lab-result>Форма [2, 3, 28, 28] · 4704 чисел</div>',
+    'correlation-lab': '<label class="generic-control">Наблюдаемая связь x и y<input type="range" min="-100" max="100" value="80" data-lab-input="association"><output data-lab-output="association">0,80</output></label><label class="generic-control">Влияние скрытого фактора z<input type="range" min="0" max="100" value="50" data-lab-input="confounder"><output data-lab-output="confounder">0,50</output></label><div class="generic-result" data-lab-result>Наблюдаемая корреляция r=0,80. Проверьте, что она сама по себе не доказывает причинность.</div>',
+    'correlation-causality': '<label class="generic-control">Наблюдаемая связь x и y<input type="range" min="-100" max="100" value="80" data-lab-input="association"><output data-lab-output="association">0,80</output></label><label class="generic-control">Влияние скрытого фактора z<input type="range" min="0" max="100" value="50" data-lab-input="confounder"><output data-lab-output="confounder">0,50</output></label><div class="generic-result" data-lab-result>Наблюдаемая корреляция r=0,80. Проверьте, что она сама по себе не доказывает причинность.</div>',
     'metric-choice': '<label class="generic-control">Порог классификации<input type="range" min="0" max="100" value="50" data-lab-input="threshold"><output data-lab-output="threshold">0.50</output></label><div class="generic-result" data-lab-result>Точность 0.78 · полнота 0.71 · F1 0.74</div>',
     'hardware-selector': '<label class="generic-control">Размер модели, млрд параметров<input type="range" min="1" max="70" value="7" data-lab-input="params"><output data-lab-output="params">7 млрд</output></label><label class="generic-control">Квантизация<select data-lab-input="quant"><option value="16">FP16</option><option value="8">INT8</option><option value="4">INT4</option></select></label><div class="generic-result" data-lab-result>Оценка видеопамяти: 14 ГБ · подходит видеокарта с 16 ГБ</div>',
     'memory-budget': '<label class="generic-control">Контекст, токенов<input type="range" min="1024" max="32768" step="1024" value="8192" data-lab-input="context"><output data-lab-output="context">8192</output></label><div class="generic-result" data-lab-result>Память KV-кэша: 1,2 ГБ · запас: 4,8 ГБ</div>',
@@ -760,6 +773,13 @@ function updateGenericLab() {
     const recall = (0.95 - threshold / 250).toFixed(2);
     const f1 = (2 * precision * recall / (Number(precision) + Number(recall))).toFixed(2);
     result.textContent = `Точность ${precision} · полнота ${recall} · F1 ${f1}`;
+  } else if (kind === 'correlation-lab' || kind === 'correlation-causality') {
+    const association = Number(value('association', 80)) / 100;
+    const confounder = Number(value('confounder', 50)) / 100;
+    generic.querySelector('[data-lab-output="association"]').textContent = association.toFixed(2).replace('.', ',');
+    generic.querySelector('[data-lab-output="confounder"]').textContent = confounder.toFixed(2).replace('.', ',');
+    const adjusted = association * (1 - confounder);
+    result.textContent = `Наблюдаемая корреляция r=${association.toFixed(2).replace('.', ',')}. После мысленного учёта z остаётся примерно r=${adjusted.toFixed(2).replace('.', ',')}. Причинный вывод требует эксперимента или правдоподобного каузального дизайна.`;
   } else if (kind === 'hardware-selector') {
     const params = Number(value('params', 7));
     const quant = Number(value('quant', 16));
@@ -847,6 +867,7 @@ async function loadLessons() {
     state.modules = program.modules || [];
     state.lessons = (program.lessons || []).map((lesson) => ({...lesson, id: normalizeLessonId(lesson.id), lab: lesson.lab || lesson.lab_id}));
     (content.lessons || []).forEach((lesson) => state.lessonContent.set(normalizeLessonId(lesson.lesson_id), lesson));
+    syncLessonToProgress();
     state.lessonId = normalizeLessonId(state.lessonId);
     if (!state.lessons.some((lesson) => lesson.id === state.lessonId)) state.lessonId = state.lessons[0].id;
     renderLesson();
@@ -858,6 +879,7 @@ async function loadLessons() {
       state.modules = program.modules || [];
       state.lessons = (program.lessons || []).map((lesson) => ({...lesson, id: normalizeLessonId(lesson.id), lab: lesson.lab || lesson.lab_id}));
       (content.lessons || []).forEach((lesson) => state.lessonContent.set(normalizeLessonId(lesson.lesson_id), lesson));
+      syncLessonToProgress();
       if (!state.lessons.some((lesson) => lesson.id === state.lessonId)) state.lessonId = state.lessons[0].id;
       renderLesson();
       renderProgress();
@@ -885,7 +907,11 @@ async function loadCurrentUser() {
       state.progress = Number(profile.completion_percent || 0);
       renderProgress();
       applyRoleVisibility();
-      if (profile.completed_lessons?.length) state.lessonId = normalizeLessonId(profile.completed_lessons.at(-1));
+    }
+    if (progress?.completed_lessons?.length && state.lessons.length) {
+      syncLessonToProgress();
+      renderLesson();
+      renderDashboardLesson();
     }
     renderProgress();
     renderDashboardLesson();
