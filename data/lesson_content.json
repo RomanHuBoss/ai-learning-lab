@@ -1725,7 +1725,7 @@
       "formal_explanation": "Stratified random применяют при независимых классах, temporal/walk-forward — при времени, group split — при повторных объектах. Transformer делает fit(X_train), затем transform остальных. Test используется один раз.",
       "manual_example": "Для [10,12,11,15,18] возьмите первые три в train, четвёртый в validation, последний в test. Медиану и масштаб считайте только по train.",
       "code_example": "series = [10, 12, 11, 15, 18]\ntrain, valid, test = series[:3], series[3:4], series[4:]\ntrain_median = sorted(train)[len(train)//2]\nprint(train, valid, test, train_median)",
-      "interactive_lab": "data-cleaning",
+      "interactive_lab": "pipeline-sort",
       "independent_exercise": "m02-ex-03",
       "misconceptions": [
         "Случайный split не исправляет утечку времени или пользователя.",
