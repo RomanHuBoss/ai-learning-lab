@@ -257,7 +257,7 @@
       ],
       "lab": "pipeline-sort",
       "exercise": "ex-009",
-      "assessment": "q-009",
+      "assessment": "q-013",
       "project": "p-001"
     },
     {
@@ -272,7 +272,7 @@
       ],
       "lab": "classification-boundary",
       "exercise": "ex-010",
-      "assessment": "q-010",
+      "assessment": "q-014",
       "project": "p-001"
     },
     {
@@ -302,7 +302,7 @@
       ],
       "lab": "confusion-matrix",
       "exercise": "ex-012",
-      "assessment": "q-010",
+      "assessment": "lesson-2.04-q03",
       "project": "p-001"
     },
     {
