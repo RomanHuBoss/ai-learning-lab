@@ -565,6 +565,44 @@ function renderLessonFormula(content) {
   return `<div class="lesson-formulas" aria-label="Формулы урока">${values.map((formula) => `<code>${escapeHtml(formula)}</code>`).join('')}</div>`;
 }
 
+const LESSON_TERM_HINTS = [
+  ['градиентный спуск', 'Итеративный способ менять параметры в направлении уменьшения функции потерь.'],
+  ['градиент', 'Вектор частных производных. Он показывает направление роста ошибки, поэтому шаг обучения идёт против него.'],
+  ['регресс', 'Задача прогнозирования числовой величины, например цены или спроса.'],
+  ['классификация', 'Задача выбора класса или вероятности класса для объекта.'],
+  ['утечка', 'Попадание в признак информации из test, будущего или другой части данных, недоступной в момент прогноза.'],
+  ['корреляция', 'Мера совместного изменения двух величин. Сама по себе не доказывает причинность.'],
+  ['причинность', 'Связь, подтверждённая сравнением с контрфактическим исходом при явных допущениях.'],
+  ['регуляризация', 'Ограничение сложности модели, которое помогает не подгонять шум обучающей выборки.'],
+  ['attention', 'Механизм взвешенного обращения к позициям контекста через Query, Key и Value.'],
+  ['токен', 'Единица текста после токенизации. Это может быть слово, часть слова или знак.'],
+  ['перплексия', 'Экспонента средней cross-entropy. Она оценивает предсказание токенов, но не проверяет факты.'],
+  ['квантизация', 'Представление весов или активаций меньшим числом бит для экономии памяти и ускорения.'],
+  ['инференс', 'Использование уже обученной модели для получения прогноза без обновления весов.'],
+  ['RAG', 'Поиск внешних фрагментов с последующей генерацией ответа на их основе.'],
+  ['эмбеддинг', 'Векторное представление объекта, в котором близость должна отражать выбранный смысл.'],
+  ['receptive field', 'Область входа, которая влияет на конкретную активацию свёрточной сети.'],
+  ['overfitting', 'Переобучение, при котором модель запоминает обучающие данные и хуже работает на новых.'],
+  ['baseline', 'Простое исходное решение, с которым сравнивают более сложную модель.'],
+  ['validation', 'Отложенная часть данных для выбора модели и настроек до финальной проверки на test.'],
+  ['drift', 'Изменение распределения данных или связи между признаками и целью после запуска.'],
+  ['KV-кэш', 'Сохранённые Key и Value предыдущих токенов, чтобы не пересчитывать контекст при генерации.'],
+  ['скалярное произведение', 'Сумма попарных произведений координат двух векторов.'],
+  ['случайный лес', 'Ансамбль деревьев, усредняющий разнообразные модели для снижения дисперсии.'],
+  ['дерево решений', 'Модель из последовательных правил split, ведущих объект к листу с прогнозом.'],
+  ['временной ряд', 'Последовательность наблюдений, где порядок и доступность будущих значений имеют значение.']
+].sort((a, b) => b[0].length - a[0].length);
+
+const LESSON_TERM_PATTERN = new RegExp(LESSON_TERM_HINTS.map(([term]) => escapeHtml(term).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'), 'gi');
+
+function lessonText(value) {
+  const escaped = escapeHtml(value ?? '');
+  return escaped.replace(LESSON_TERM_PATTERN, (match) => {
+    const [, hint] = LESSON_TERM_HINTS.find(([term]) => term.toLowerCase() === match.toLowerCase()) || [];
+    return `<span class="term-help" tabindex="0" role="note" title="${escapeHtml(hint || 'Краткое определение термина из текущего урока.')}" aria-label="${escapeHtml(match)}. ${escapeHtml(hint || 'Краткое определение термина из текущего урока.')}">${match}</span>`;
+  });
+}
+
 function renderLessonSections(content) {
   const sections = content.lecture_sections || content.lesson_sections || [];
   if (!Array.isArray(sections) || !sections.length) return '';
@@ -575,7 +613,7 @@ function renderLessonSections(content) {
     const rawBullets = value.bullets ?? value.points ?? value.items ?? [];
     const bullets = (Array.isArray(rawBullets) ? rawBullets : [rawBullets]).filter((bullet) => bullet !== null && bullet !== undefined && String(bullet).trim());
     const practice = Array.isArray(value.practice) ? value.practice : value.practice ? [value.practice] : [];
-    return `<section class="lesson-section"><h3>${escapeHtml(value.title || `Раздел ${index + 1}`)}</h3>${paragraphs.map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join('')}${value.formula ? `<div class="lesson-section-formula"><code>${escapeHtml(value.formula)}</code></div>` : ''}${value.example ? `<div class="lesson-section-example"><strong>Пример</strong><p>${escapeHtml(value.example)}</p></div>` : ''}${bullets.length ? `<ul>${bullets.map((bullet) => `<li>${escapeHtml(bullet)}</li>`).join('')}</ul>` : ''}${practice.length ? `<div class="lesson-section-practice"><strong>Попробуйте</strong><ul>${practice.map((task) => `<li>${escapeHtml(task)}</li>`).join('')}</ul></div>` : ''}</section>`;
+    return `<section class="lesson-section"><h3>${escapeHtml(value.title || `Раздел ${index + 1}`)}</h3>${paragraphs.map((paragraph) => `<p>${lessonText(paragraph)}</p>`).join('')}${value.formula ? `<div class="lesson-section-formula"><code>${escapeHtml(value.formula)}</code></div>` : ''}${value.example ? `<div class="lesson-section-example"><strong>Пример</strong><p>${lessonText(value.example)}</p></div>` : ''}${bullets.length ? `<ul>${bullets.map((bullet) => `<li>${lessonText(bullet)}</li>`).join('')}</ul>` : ''}${practice.length ? `<div class="lesson-section-practice"><strong>Попробуйте</strong><ul>${practice.map((task) => `<li>${lessonText(task)}</li>`).join('')}</ul></div>` : ''}</section>`;
   }).join('');
 }
 
@@ -601,7 +639,7 @@ function renderLesson() {
   nextButton.disabled = !next;
   previousButton.setAttribute('aria-disabled', String(!previous));
   nextButton.setAttribute('aria-disabled', String(!next));
-  const list = (items, fallback) => (items?.length ? items : fallback).map((item) => `<li>${escapeHtml(item)}</li>`).join('');
+  const list = (items, fallback) => (items?.length ? items : fallback).map((item) => `<li>${lessonText(item)}</li>`).join('');
   const known = content.what_is_known || [];
   const objectives = content.learning_objectives || lesson.objectives || ['Понять основную идею темы', 'Применить её в практике'];
   const misconceptions = content.misconceptions || [];
@@ -613,7 +651,7 @@ function renderLesson() {
   const lessonSections = renderLessonSections(content);
   const lessonLinks = previous || next ? `<nav class="lesson-related-links" aria-label="Навигация урока">${previous ? `<button class="text-button" data-action="open-lesson" data-lesson-id="${escapeHtml(previous.id)}">← Предыдущий урок · ${escapeHtml(lessonTitle(previous))}</button>` : ''}${next ? `<button class="text-button" data-action="open-lesson" data-lesson-id="${escapeHtml(next.id)}">Следующий урок · ${escapeHtml(lessonTitle(next))} →</button>` : ''}</nav>` : '';
   const assessmentLink = `<button class="text-button lesson-inline-link" data-action="lesson-tasks">Пройти мини-тест к уроку →</button>`;
-  $('#lesson-content').innerHTML = `<div class="lesson-content-header"><div><span class="panel-kicker">ЛЕКЦИЯ · УРОК ${escapeHtml(lesson.id)}</span><h2>${escapeHtml(title)}</h2></div><span class="lesson-duration">${content.duration_minutes || lesson.duration_minutes || '—'} мин</span></div><div class="lesson-content-actions"><button class="button button-primary" data-action="lesson-lab">Открыть лабораторию ↓</button><button class="button button-ghost" data-action="lesson-tasks">Перейти к проверке →</button></div><details class="lesson-plan"><summary>План урока</summary><ol>${list(lessonPlan, ['Интуиция', 'Визуализация', 'Практика', 'Проверка понимания'])}</ol></details>${lessonSections ? `<div class="lesson-sections" aria-label="Основной материал урока">${lessonSections}</div>` : ''}<div class="lesson-lecture-grid"><div><h3>Что уже известно</h3><ul>${list(known, ['Базовые понятия предыдущих уроков'])}</ul><h3>Цели урока</h3><ul>${list(objectives, ['Понять основную идею темы', 'Применить её в практике'])}</ul><h3>Интуиция</h3><p>${escapeHtml(content.intuition || 'Сначала сформулируйте идею своими словами, затем проверьте её на маленьком примере.')}</p><h3>Визуализация</h3>${visualization}<h3>Формальное объяснение</h3><p>${escapeHtml(content.formal_explanation || 'Свяжите обозначения, входы, выходы и ограничение метода.')}</p>${formulas}</div><div><h3>Почему это важно</h3><p>${escapeHtml(content.why_it_matters || 'Эта тема связывает фундаментальные понятия с рабочими ML/AI-сценариями.')}</p><h3>Ручной пример</h3><p>${escapeHtml(content.manual_example || 'Решите небольшой пример вручную и проверьте численный результат.')}</p><h3>Типичные заблуждения</h3><ul>${list(misconceptions, ['Не подменяйте интуицию формальным условием.', 'Проверяйте результат на новых данных.'])}</ul><h3>Проверка понимания</h3><p>Ответьте на вопрос по этой лекции и разберите объяснение ошибки. ${assessmentLink}</p><h3>Если ответ неверен</h3><p>${escapeHtml(remediation)}</p><h3>Короткое резюме</h3><ul>${list(summary, ['Повторите ключевую идею', 'Сделайте практическое упражнение'])}</ul></div></div>${content.code_example ? `<details class="lesson-code"><summary>Пример кода</summary><pre><code>${escapeHtml(content.code_example)}</code></pre><button class="text-button lesson-code-runner" data-action="open-code-runner">Открыть этот пример в песочнице →</button></details>` : ''}${lessonLinks}<div class="lesson-content-footer"><button class="text-button" data-action="lesson-exam">Открыть страницу экзамена →</button></div>`;
+  $('#lesson-content').innerHTML = `<div class="lesson-content-header"><div><span class="panel-kicker">ЛЕКЦИЯ · УРОК ${escapeHtml(lesson.id)}</span><h2>${escapeHtml(title)}</h2></div><span class="lesson-duration">${content.duration_minutes || lesson.duration_minutes || '—'} мин</span></div><div class="lesson-content-actions"><button class="button button-primary" data-action="lesson-lab">Открыть лабораторию ↓</button><button class="button button-ghost" data-action="lesson-tasks">Перейти к проверке →</button></div><details class="lesson-plan"><summary>План урока</summary><ol>${list(lessonPlan, ['Интуиция', 'Визуализация', 'Практика', 'Проверка понимания'])}</ol></details>${lessonSections ? `<div class="lesson-sections" aria-label="Основной материал урока">${lessonSections}</div>` : ''}<div class="lesson-lecture-grid"><div><h3>Что уже известно</h3><ul>${list(known, ['Базовые понятия предыдущих уроков'])}</ul><h3>Цели урока</h3><ul>${list(objectives, ['Понять основную идею темы', 'Применить её в практике'])}</ul><h3>Интуиция</h3><p>${lessonText(content.intuition || 'Сначала сформулируйте идею своими словами, затем проверьте её на маленьком примере.')}</p><h3>Визуализация</h3>${visualization}<h3>Формальное объяснение</h3><p>${lessonText(content.formal_explanation || 'Свяжите обозначения, входы, выходы и ограничение метода.')}</p>${formulas}</div><div><h3>Почему это важно</h3><p>${lessonText(content.why_it_matters || 'Эта тема связывает фундаментальные понятия с рабочими ML/AI-сценариями.')}</p><h3>Ручной пример</h3><p>${lessonText(content.manual_example || 'Решите небольшой пример вручную и проверьте численный результат.')}</p><h3>Типичные заблуждения</h3><ul>${list(misconceptions, ['Не подменяйте интуицию формальным условием.', 'Проверяйте результат на новых данных.'])}</ul><h3>Проверка понимания</h3><p>Ответьте на вопрос по этой лекции и разберите объяснение ошибки. ${assessmentLink}</p><h3>Если ответ неверен</h3><p>${lessonText(remediation)}</p><h3>Короткое резюме</h3><ul>${list(summary, ['Повторите ключевую идею', 'Сделайте практическое упражнение'])}</ul></div></div>${content.code_example ? `<details class="lesson-code"><summary>Пример реализации (необязательно)</summary><p class="lesson-code-note">Идею можно реализовать на Python, R, JavaScript или псевдокодом. Код ниже показывает один из вариантов, а не является целью урока.</p><pre><code>${escapeHtml(content.code_example)}</code></pre><button class="text-button lesson-code-runner" data-action="open-code-runner">Открыть пример в песочнице →</button></details>` : ''}${lessonLinks}<div class="lesson-content-footer"><button class="text-button" data-action="lesson-exam">Открыть страницу экзамена →</button></div>`;
   persist();
   renderPathState();
   renderInteractiveLab(content, lesson);
