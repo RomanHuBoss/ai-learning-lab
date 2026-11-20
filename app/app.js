@@ -702,7 +702,7 @@ function renderInteractiveLab(content, lesson) {
   const visual = {
     'variable-playground': '<table><thead><tr><th>Имя</th><th>Значение</th><th>Тип</th></tr></thead><tbody><tr><td>x</td><td id="generic-x-value">3</td><td>int</td></tr><tr><td>name</td><td>AI Lab</td><td>str</td></tr><tr><td>enabled</td><td>True</td><td>bool</td></tr></tbody></table>',
     'type-inspector': '<table><thead><tr><th>Значение</th><th>Тип</th><th>Доступная операция</th></tr></thead><tbody><tr><td>3</td><td>int</td><td>сложение</td></tr><tr><td>0,15</td><td>float</td><td>деление</td></tr><tr><td>[1, 2]</td><td>list</td><td>обход</td></tr></tbody></table>',
-    'function-plot': '<svg viewBox="0 0 520 220" role="img" aria-label="График функции f от x"><path d="M42 180 H480 M260 30 V195" stroke="rgba(148,163,184,.55)"/><path d="M70 55 Q180 180 260 195 Q340 180 450 55" fill="none" stroke="#7dd3fc" stroke-width="4"/><text x="462" y="198" fill="currentColor">x</text><text x="268" y="38" fill="currentColor">f(x)</text><text x="248" y="214" fill="currentColor">0</text></svg>',
+    'function-plot': '<svg viewBox="0 0 520 220" role="img" aria-label="График функции f от x" data-plot-svg><g stroke="currentColor" stroke-opacity=".14" stroke-dasharray="3 4"><path d="M70 30V195 M165 30V195 M260 30V195 M355 30V195 M450 30V195 M42 55H480 M42 105H480 M42 155H480"/></g><path d="M42 155 H480 M260 30 V195" fill="none" stroke="currentColor" stroke-opacity=".6"/><text x="462" y="198" fill="currentColor">x</text><text x="268" y="38" fill="currentColor">f(x)</text><text x="62" y="214" fill="currentColor">−5</text><text x="253" y="214" fill="currentColor">0</text><text x="442" y="214" fill="currentColor">5</text><text x="30" y="159" text-anchor="end" fill="currentColor">0</text><text x="30" y="109" text-anchor="end" fill="currentColor">10</text><text x="30" y="59" text-anchor="end" fill="currentColor">20</text><polyline data-plot-path points="70,55 165,123.75 260,155 355,123.75 450,55" fill="none" stroke="#7dd3fc" stroke-width="4" stroke-linejoin="round"/><circle data-plot-point cx="336" cy="135" r="6" fill="#67e8a5" stroke="#0b1220" stroke-width="2"/></svg>',
     'correlation-lab': '<table><thead><tr><th>Наблюдение</th><th>Реклама x</th><th>Продажи y</th><th>Скрытый фактор z</th></tr></thead><tbody><tr><td>1</td><td>1</td><td>10</td><td>тёплый день</td></tr><tr><td>2</td><td>2</td><td>12</td><td>тёплый день</td></tr><tr><td>3</td><td>3</td><td>14</td><td>жара</td></tr><tr><td>4</td><td>4</td><td>16</td><td>жара</td></tr></tbody></table>',
     'correlation-causality': '<table><thead><tr><th>Наблюдение</th><th>Реклама x</th><th>Продажи y</th><th>Скрытый фактор z</th></tr></thead><tbody><tr><td>1</td><td>1</td><td>10</td><td>тёплый день</td></tr><tr><td>2</td><td>2</td><td>12</td><td>тёплый день</td></tr><tr><td>3</td><td>3</td><td>14</td><td>жара</td></tr><tr><td>4</td><td>4</td><td>16</td><td>жара</td></tr></tbody></table>',
     'data-cleaning': '<table><thead><tr><th>row</th><th>value</th><th>status</th></tr></thead><tbody><tr><td>1</td><td>12.4</td><td>ok</td></tr><tr><td>2</td><td>—</td><td>missing</td></tr><tr><td>3</td><td>999.0</td><td>outlier</td></tr></tbody></table>',
@@ -784,6 +784,20 @@ function updateGenericLab() {
     const selected = value('plot-function', 'square');
     const fn = selected === 'absolute' ? Math.abs(x) : selected === 'linear' ? 2 * x + 1 : x * x;
     generic.querySelector('[data-lab-output="plot-x"]').textContent = String(x);
+    const plot = generic.querySelector('[data-plot-svg]');
+    const plotPath = plot?.querySelector('[data-plot-path]');
+    const plotPoint = plot?.querySelector('[data-plot-point]');
+    const evaluate = (point) => selected === 'absolute' ? Math.abs(point) : selected === 'linear' ? 2 * point + 1 : point * point;
+    const mapX = (point) => 70 + ((point + 5) / 10) * 380;
+    const mapY = (value) => 30 + ((25 - value) / 30) * 150;
+    if (plotPath) {
+      const points = Array.from({length: 21}, (_, index) => -5 + index * .5).map((point) => `${mapX(point).toFixed(1)},${mapY(evaluate(point)).toFixed(1)}`).join(' ');
+      plotPath.setAttribute('points', points);
+    }
+    if (plotPoint) {
+      plotPoint.setAttribute('cx', mapX(x).toFixed(1));
+      plotPoint.setAttribute('cy', mapY(fn).toFixed(1));
+    }
     result.textContent = `f(${x}) = ${Number(fn.toFixed(2))}. Точка (${x}; ${Number(fn.toFixed(2))}) должна лежать на выбранном графике.`;
   } else if (kind === 'tensor-shapes') {
     const batch = Number(value('batch', 2));
