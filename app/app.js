@@ -1062,7 +1062,7 @@ function updateLabReadout(w, loss) {
   $('#readout-gradient').textContent = gradient.toFixed(2);
 }
 
-const CONTENT_API_VERSION = '20261120-course60';
+const CONTENT_API_VERSION = '20261120-course61';
 const CONTENT_API_PATHS = new Set(['/api/full-program', '/api/lesson-content', '/api/questions', '/data/full_program.json', '/data/lesson_content.json']);
 
 function prepareContentRequest(url, options = {}) {
