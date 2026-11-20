@@ -565,6 +565,20 @@ function renderLessonFormula(content) {
   return `<div class="lesson-formulas" aria-label="Формулы урока">${values.map((formula) => `<code>${escapeHtml(formula)}</code>`).join('')}</div>`;
 }
 
+function renderLessonSections(content) {
+  const sections = content.lecture_sections || content.lesson_sections || [];
+  if (!Array.isArray(sections) || !sections.length) return '';
+  return sections.map((section, index) => {
+    const value = typeof section === 'string' ? {title: `Раздел ${index + 1}`, paragraphs: [section]} : (section || {});
+    const rawParagraphs = value.paragraphs ?? value.body ?? value.text ?? value.content ?? [];
+    const paragraphs = (Array.isArray(rawParagraphs) ? rawParagraphs : [rawParagraphs]).filter((paragraph) => paragraph !== null && paragraph !== undefined && String(paragraph).trim());
+    const rawBullets = value.bullets ?? value.points ?? value.items ?? [];
+    const bullets = (Array.isArray(rawBullets) ? rawBullets : [rawBullets]).filter((bullet) => bullet !== null && bullet !== undefined && String(bullet).trim());
+    const practice = Array.isArray(value.practice) ? value.practice : value.practice ? [value.practice] : [];
+    return `<section class="lesson-section"><h3>${escapeHtml(value.title || `Раздел ${index + 1}`)}</h3>${paragraphs.map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join('')}${value.formula ? `<div class="lesson-section-formula"><code>${escapeHtml(value.formula)}</code></div>` : ''}${value.example ? `<div class="lesson-section-example"><strong>Пример</strong><p>${escapeHtml(value.example)}</p></div>` : ''}${bullets.length ? `<ul>${bullets.map((bullet) => `<li>${escapeHtml(bullet)}</li>`).join('')}</ul>` : ''}${practice.length ? `<div class="lesson-section-practice"><strong>Попробуйте</strong><ul>${practice.map((task) => `<li>${escapeHtml(task)}</li>`).join('')}</ul></div>` : ''}</section>`;
+  }).join('');
+}
+
 function renderLesson() {
   const lesson = currentLesson();
   if (!lesson) return;
@@ -596,7 +610,7 @@ function renderLesson() {
   const visualization = renderLessonVisualization(content);
   const formulas = renderLessonFormula(content);
   const remediation = content.remediation?.if_wrong || 'Вернитесь к предыдущему уроку и повторите ручной пример.';
-  const lessonSections = (content.lesson_sections || []).map((section) => `<section class="lesson-section"><h3>${escapeHtml(section.title || 'Раздел урока')}</h3>${(section.paragraphs || []).map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join('')}${section.formula ? `<div class="lesson-section-formula"><code>${escapeHtml(section.formula)}</code></div>` : ''}${section.example ? `<div class="lesson-section-example"><strong>Пример</strong><p>${escapeHtml(section.example)}</p></div>` : ''}${section.bullets?.length ? `<ul>${section.bullets.map((bullet) => `<li>${escapeHtml(bullet)}</li>`).join('')}</ul>` : ''}${section.practice?.length ? `<div class="lesson-section-practice"><strong>Попробуйте</strong><ul>${section.practice.map((task) => `<li>${escapeHtml(task)}</li>`).join('')}</ul></div>` : ''}</section>`).join('');
+  const lessonSections = renderLessonSections(content);
   const lessonLinks = previous || next ? `<nav class="lesson-related-links" aria-label="Навигация урока">${previous ? `<button class="text-button" data-action="open-lesson" data-lesson-id="${escapeHtml(previous.id)}">← Предыдущий урок · ${escapeHtml(lessonTitle(previous))}</button>` : ''}${next ? `<button class="text-button" data-action="open-lesson" data-lesson-id="${escapeHtml(next.id)}">Следующий урок · ${escapeHtml(lessonTitle(next))} →</button>` : ''}</nav>` : '';
   const assessmentLink = `<button class="text-button lesson-inline-link" data-action="lesson-tasks">Пройти мини-тест к уроку →</button>`;
   $('#lesson-content').innerHTML = `<div class="lesson-content-header"><div><span class="panel-kicker">ЛЕКЦИЯ · УРОК ${escapeHtml(lesson.id)}</span><h2>${escapeHtml(title)}</h2></div><span class="lesson-duration">${content.duration_minutes || lesson.duration_minutes || '—'} мин</span></div><div class="lesson-content-actions"><button class="button button-primary" data-action="lesson-lab">Открыть лабораторию ↓</button><button class="button button-ghost" data-action="lesson-tasks">Перейти к проверке →</button></div><details class="lesson-plan"><summary>План урока</summary><ol>${list(lessonPlan, ['Интуиция', 'Визуализация', 'Практика', 'Проверка понимания'])}</ol></details>${lessonSections ? `<div class="lesson-sections" aria-label="Основной материал урока">${lessonSections}</div>` : ''}<div class="lesson-lecture-grid"><div><h3>Что уже известно</h3><ul>${list(known, ['Базовые понятия предыдущих уроков'])}</ul><h3>Цели урока</h3><ul>${list(objectives, ['Понять основную идею темы', 'Применить её в практике'])}</ul><h3>Интуиция</h3><p>${escapeHtml(content.intuition || 'Сначала сформулируйте идею своими словами, затем проверьте её на маленьком примере.')}</p><h3>Визуализация</h3>${visualization}<h3>Формальное объяснение</h3><p>${escapeHtml(content.formal_explanation || 'Свяжите обозначения, входы, выходы и ограничение метода.')}</p>${formulas}</div><div><h3>Почему это важно</h3><p>${escapeHtml(content.why_it_matters || 'Эта тема связывает фундаментальные понятия с рабочими ML/AI-сценариями.')}</p><h3>Ручной пример</h3><p>${escapeHtml(content.manual_example || 'Решите небольшой пример вручную и проверьте численный результат.')}</p><h3>Типичные заблуждения</h3><ul>${list(misconceptions, ['Не подменяйте интуицию формальным условием.', 'Проверяйте результат на новых данных.'])}</ul><h3>Проверка понимания</h3><p>Ответьте на вопрос по этой лекции и разберите объяснение ошибки. ${assessmentLink}</p><h3>Если ответ неверен</h3><p>${escapeHtml(remediation)}</p><h3>Короткое резюме</h3><ul>${list(summary, ['Повторите ключевую идею', 'Сделайте практическое упражнение'])}</ul></div></div>${content.code_example ? `<details class="lesson-code"><summary>Пример кода</summary><pre><code>${escapeHtml(content.code_example)}</code></pre><button class="text-button lesson-code-runner" data-action="open-code-runner">Открыть этот пример в песочнице →</button></details>` : ''}${lessonLinks}<div class="lesson-content-footer"><button class="text-button" data-action="lesson-exam">Открыть страницу экзамена →</button></div>`;
@@ -996,6 +1010,21 @@ function updateLabReadout(w, loss) {
   $('#readout-gradient').textContent = gradient.toFixed(2);
 }
 
+const CONTENT_API_VERSION = '20261120-course60';
+const CONTENT_API_PATHS = new Set(['/api/full-program', '/api/lesson-content', '/api/questions', '/data/full_program.json', '/data/lesson_content.json']);
+
+function prepareContentRequest(url, options = {}) {
+  const method = String(options.method || 'GET').toUpperCase();
+  if (method !== 'GET') return {url, options};
+  const parsed = new URL(url, window.location.origin);
+  if (!CONTENT_API_PATHS.has(parsed.pathname)) return {url, options};
+  parsed.searchParams.set('v', CONTENT_API_VERSION);
+  const preparedUrl = parsed.origin === window.location.origin
+    ? `${parsed.pathname}${parsed.search}${parsed.hash}`
+    : parsed.toString();
+  return {url: preparedUrl, options: {...options, cache: 'no-store'}};
+}
+
 function stepLab() {
   if (state.lab.step >= 24) { stopLab(); $('#lab-status').textContent = 'Минимум найден · попробуйте другой темп'; return; }
   state.lab.step += 1;
@@ -1024,7 +1053,8 @@ async function fetchJson(url, options = {}) {
   const token = localStorage.getItem('ailab:token');
   const headers = {'Content-Type':'application/json', ...(options.headers || {})};
   if (token) headers.Authorization = `Bearer ${token}`;
-  const response = await fetch(url, {...options, headers});
+  const request = prepareContentRequest(url, options);
+  const response = await fetch(request.url, {...request.options, headers});
   if (response.status === 401) {
     localStorage.removeItem('ailab:token');
     applyUserState(null);
