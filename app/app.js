@@ -1067,7 +1067,7 @@ function updateLabReadout(w, loss) {
   $('#readout-gradient').textContent = gradient.toFixed(2);
 }
 
-const CONTENT_API_VERSION = '20261120-course62';
+const CONTENT_API_VERSION = '20261120-course63';
 const CONTENT_API_PATHS = new Set(['/api/full-program', '/api/lesson-content', '/api/questions', '/data/full_program.json', '/data/lesson_content.json']);
 
 function prepareContentRequest(url, options = {}) {
@@ -1211,7 +1211,11 @@ async function loadTaskForCurrentLesson() {
     });
     const preferred = conceptual.find((item) => item.id === preferredId);
     const sameLesson = conceptual.filter((item) => normalizeLessonId(item.lesson_id) === normalized);
-    state.taskSession = {questions: [preferred, ...sameLesson.filter((item) => item !== preferred)].filter(Boolean).slice(0, 20), index: 0, answered: new Set()};
+    const authored = sameLesson.filter((item) => String(item.id).startsWith(`lesson-${normalized}-`));
+    const supplemental = sameLesson.filter((item) => !String(item.id).startsWith(`lesson-${normalized}-`));
+    const ordered = [preferred, ...authored, ...supplemental].filter(Boolean);
+    const unique = ordered.filter((item, index, items) => items.findIndex((candidate) => candidate.id === item.id) === index);
+    state.taskSession = {questions: unique.slice(0, 20), index: 0, answered: new Set()};
     state.taskQuestion = state.taskSession.questions[0];
     renderCurrentTaskQuestion();
   } catch (error) {
